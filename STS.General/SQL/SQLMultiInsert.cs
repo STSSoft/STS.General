@@ -83,6 +83,12 @@ namespace STS.General.SQL
             return cmd;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="type"></param>
+        /// <param name="size"></param>
         public void AddField(string name, DbType type, int size)
         {
             if (Connection is OleDbConnection)
