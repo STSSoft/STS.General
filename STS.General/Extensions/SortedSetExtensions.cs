@@ -22,6 +22,8 @@ namespace STS.General.Extensions
 
         private Func<SortedSet<T>, T, KeyValuePair<bool, T>> findNext;
         private Func<SortedSet<T>, T, KeyValuePair<bool, T>> findPrev;
+        private Func<SortedSet<T>, T, KeyValuePair<bool, T>> findAfter;
+        private Func<SortedSet<T>, T, KeyValuePair<bool, T>> findBefore;
 
         public SortedSetHelper()
         {
@@ -53,6 +55,8 @@ namespace STS.General.Extensions
             getViewBetween = lambdaGetViewBetween.Compile();
             findNext = CreateFindNextMethod().Compile();
             findPrev = CreateFindPrevMethod().Compile();
+            findAfter = CreateFindAfterMethod().Compile();
+            findBefore = CreateFindBeforeMethod().Compile();
         }
 
         public Expression<Func<SortedSet<T>, T, KeyValuePair<bool, T>>> CreateFindMethod()
@@ -848,6 +852,194 @@ namespace STS.General.Extensions
             return Expression.Lambda<Func<SortedSet<T>, T, KeyValuePair<bool, T>>>(Expression.Block(new ParameterExpression[] { cmp, prev, node }, list), set, item);
         }
 
+        public Expression<Func<SortedSet<T>, T, KeyValuePair<bool, T>>> CreateFindAfterMethod()
+        {
+            var set = Expression.Parameter(typeof(SortedSet<T>), "set");
+            var item = Expression.Parameter(typeof(T), "item");
+            var cmp = Expression.Variable(typeof(int), "cmp");
+
+            Type nodeType = typeof(SortedSet<T>).GetNestedType("Node", BindingFlags.NonPublic).MakeGenericType(typeof(T));
+            var after = Expression.Variable(nodeType, "after");
+            var node = Expression.Variable(nodeType, "node");
+            var tmp = Expression.Variable(nodeType, "tmp");
+
+            var returnLabel = Expression.Label(typeof(KeyValuePair<bool, T>));
+
+            List<Expression> list = new List<Expression>();
+
+            list.Add(Expression.Assign(after, Expression.Constant(null, nodeType)));
+            list.Add(Expression.Assign(node, Expression.Field(set, "root")));
+
+            var nodeItem = Expression.PropertyOrField(node, !Environment.RunningOnMono ? "Item" : "item");
+            var nodeLeft = Expression.PropertyOrField(node, !Environment.RunningOnMono ? "Left" : "left");
+            var nodeRight = Expression.PropertyOrField(node, !Environment.RunningOnMono ? "Right" : "right");
+
+            var afterLoop = Expression.Label("AfterLoop");
+
+            list.Add(Expression.Loop(Expression.IfThenElse(Expression.NotEqual(node, Expression.Constant(null)),
+                 Expression.Block(Expression.Assign(cmp,
+                     Expression.Call(Expression.PropertyOrField(set, "comparer"), typeof(IComparer<T>).GetMethod("Compare"), item,
+                     nodeItem)),
+                 Expression.IfThen(Expression.Equal(cmp, Expression.Constant(0, typeof(int))),
+                    Expression.Block(Expression.IfThen(Expression.NotEqual(nodeRight, Expression.Constant(null, nodeType)),
+                            Expression.Block(new ParameterExpression[] { tmp }, Expression.Assign(tmp, nodeRight),
+                                Expression.Loop(Expression.IfThenElse(Expression.NotEqual(tmp, Expression.Constant(null, nodeType)),
+                                    Expression.Block(Expression.Assign(after, tmp),
+                                        Expression.Assign(tmp, Expression.PropertyOrField(tmp, !Environment.RunningOnMono ? "Left" : "left"))), Expression.Break(afterLoop))))),
+                        Expression.Break(afterLoop))),
+                 Expression.IfThenElse(Expression.LessThan(cmp, Expression.Constant(0, typeof(int))),
+                      Expression.Block(Expression.Assign(after, node),
+                         Expression.Assign(node, nodeLeft)),
+                      Expression.Assign(node, nodeRight))), Expression.Break(afterLoop)), afterLoop));
+
+            var afterItem = Expression.PropertyOrField(after, !Environment.RunningOnMono ? "Item" : "item");
+
+            list.Add(Expression.IfThen(Expression.NotEqual(after, Expression.Constant(null)),
+                Expression.Return(returnLabel,
+                     Expression.New(typeof(KeyValuePair<bool, T>).GetConstructor(new Type[] { typeof(bool), typeof(T) }), Expression.Constant(true, typeof(bool)), afterItem))));
+
+            list.Add(Expression.Label(returnLabel,
+                Expression.New(typeof(KeyValuePair<bool, T>).GetConstructor(new Type[] { typeof(bool), typeof(T) }),
+                Expression.Constant(false, typeof(bool)), Expression.Constant(default(T), typeof(T)))));
+
+            //public KeyValuePair<bool,T> FindAfter(SortedSet<T> set, T item)
+            //{
+            //    int cmp;
+            //    Node next = null;
+            //    Node node = set.root
+
+            //    while(node != null)
+            //    {
+            //        cmp = set.comparer.Compare(item, node.Item);
+
+            //        if (cmp == 0)
+            //        {
+            //            if (node.Right != null)
+            //            {
+            //                Node tmp = node.Right;
+
+            //                while (tmp != null)
+            //                {
+            //                    next = tmp;
+            //                    tmp = tmp.Left;
+            //                }
+            //            }
+
+            //            break;
+            //        }
+
+            //        if (cmp < 0)
+            //        {
+            //            next = node;
+            //            node = node.Left;
+            //        }
+            //        else
+            //            node = node.Right;
+            //    }
+
+            //    if (next != null)
+            //        return new KeyValuePair<bool,T>(true, next.Item);
+
+            //    return new KeyValuePair<bool,T>(false, default(T));
+            //}
+
+            return Expression.Lambda<Func<SortedSet<T>, T, KeyValuePair<bool, T>>>(Expression.Block(new ParameterExpression[] { cmp, after, node }, list), set, item);
+        }
+
+        public Expression<Func<SortedSet<T>, T, KeyValuePair<bool, T>>> CreateFindBeforeMethod()
+        {
+            var set = Expression.Parameter(typeof(SortedSet<T>), "set");
+            var item = Expression.Parameter(typeof(T), "item");
+            var cmp = Expression.Variable(typeof(int), "cmp");
+
+            Type nodeType = typeof(SortedSet<T>).GetNestedType("Node", BindingFlags.NonPublic).MakeGenericType(typeof(T));
+            var before = Expression.Variable(nodeType, "before");
+            var node = Expression.Variable(nodeType, "node");
+            var tmp = Expression.Variable(nodeType, "tmp");
+
+            var returnLabel = Expression.Label(typeof(KeyValuePair<bool, T>));
+
+            List<Expression> list = new List<Expression>();
+
+            list.Add(Expression.Assign(before, Expression.Constant(null, nodeType)));
+            list.Add(Expression.Assign(node, Expression.Field(set, "root")));
+
+            var nodeItem = Expression.PropertyOrField(node, !Environment.RunningOnMono ? "Item" : "item");
+            var nodeLeft = Expression.PropertyOrField(node, !Environment.RunningOnMono ? "Left" : "left");
+            var nodeRight = Expression.PropertyOrField(node, !Environment.RunningOnMono ? "Right" : "right");
+
+            var afterLoop = Expression.Label("AfterLoop");
+
+            list.Add(Expression.Loop(Expression.IfThenElse(Expression.NotEqual(node, Expression.Constant(null)),
+                 Expression.Block(Expression.Assign(cmp,
+                     Expression.Call(Expression.PropertyOrField(set, "comparer"), typeof(IComparer<T>).GetMethod("Compare"), item,
+                     nodeItem)),
+                 Expression.IfThen(Expression.Equal(cmp, Expression.Constant(0, typeof(int))),
+                    Expression.Block(Expression.IfThen(Expression.NotEqual(nodeLeft, Expression.Constant(null, nodeType)),
+                            Expression.Block(new ParameterExpression[] { tmp }, Expression.Assign(tmp, nodeLeft),
+                                Expression.Loop(Expression.IfThenElse(Expression.NotEqual(tmp, Expression.Constant(null, nodeType)),
+                                    Expression.Block(Expression.Assign(before, tmp),
+                                        Expression.Assign(tmp, Expression.PropertyOrField(tmp, !Environment.RunningOnMono ? "Right" : "right"))), Expression.Break(afterLoop))))),
+                        Expression.Break(afterLoop))),
+                 Expression.IfThenElse(Expression.GreaterThan(cmp, Expression.Constant(0, typeof(int))),
+                      Expression.Block(Expression.Assign(before, node),
+                         Expression.Assign(node, nodeRight)),
+                      Expression.Assign(node, nodeLeft))), Expression.Break(afterLoop)), afterLoop));
+
+            var beforeItem = Expression.PropertyOrField(before, !Environment.RunningOnMono ? "Item" : "item");
+
+            list.Add(Expression.IfThen(Expression.NotEqual(before, Expression.Constant(null)),
+                Expression.Return(returnLabel,
+                     Expression.New(typeof(KeyValuePair<bool, T>).GetConstructor(new Type[] { typeof(bool), typeof(T) }), Expression.Constant(true, typeof(bool)), beforeItem))));
+
+            list.Add(Expression.Label(returnLabel,
+                Expression.New(typeof(KeyValuePair<bool, T>).GetConstructor(new Type[] { typeof(bool), typeof(T) }),
+                Expression.Constant(false, typeof(bool)), Expression.Constant(default(T), typeof(T)))));
+
+            //public KeyValuePair<bool,T> FindBefore(SortedSet<T> set, T item)
+            //{
+            //    int cmp;
+            //    Node prev = null;
+            //    Node node = set.root
+
+            //    while(node != null)
+            //    {
+            //        cmp = set.comparer.Compare(item, node.Item);
+
+            //        if (cmp == 0)
+            //        {
+            //            if (node.Left != null)
+            //            {
+            //                Node tmp = node.Left;
+
+            //                while (tmp != null)
+            //                {
+            //                    prev = tmp;
+            //                    tmp = tmp.Right;
+            //                }
+            //            }
+
+            //            break;
+            //        }
+
+            //        if (cmp > 0)
+            //        {
+            //            prev = node;
+            //            node = node.Right;
+            //        }
+            //        else
+            //            node = node.Left;
+            //    }
+
+            //    if (prev != null)
+            //        return new KeyValuePair<bool,T>(true, prev.Item);
+
+            //    return new KeyValuePair<bool,T>(false, default(T));
+            //}
+
+            return Expression.Lambda<Func<SortedSet<T>, T, KeyValuePair<bool, T>>>(Expression.Block(new ParameterExpression[] { cmp, before, node }, list), set, item);
+        }
+
         public bool TryGetValue(SortedSet<T> set, T key, out T value)
         {
             var kv = find(set, key);
@@ -885,6 +1077,16 @@ namespace STS.General.Extensions
         public KeyValuePair<bool, T> FindPrev(SortedSet<T> set, T key)
         {
             return findPrev(set, key);
+        }
+
+        public KeyValuePair<bool, T> FindAfter(SortedSet<T> set, T key)
+        {
+            return findAfter(set, key);
+        }
+
+        public KeyValuePair<bool, T> FindBefore(SortedSet<T> set, T key)
+        {
+            return findBefore(set, key);
         }
     }
 
@@ -965,84 +1167,20 @@ namespace STS.General.Extensions
 
         public static bool FindAfter<T>(this SortedSet<T> set, T key, out T value)
         {
-            if (set.Count == 0)
-            {
-                value = default(T);
+            var returnValue = SortedSetHelper<T>.Instance.FindAfter(set, key);
 
-                return false;
-            }
+            value = returnValue.Value;
 
-            if (set.Comparer.Compare(key, set.Max) > 0)
-            {
-                value = default(T);
-
-                return false;
-            }
-
-            var subSetEnumerator = set.GetViewBetween(key, set.Max).GetEnumerator();
-            subSetEnumerator.MoveNext();
-            var next = subSetEnumerator.Current;
-
-            if (set.Comparer.Compare(key, next) != 0)
-            {
-                value = next;
-
-                return true;
-            }
-
-            if (subSetEnumerator.MoveNext())
-            {
-                value = subSetEnumerator.Current;
-
-                return true;
-            }
-            else
-            {
-                value = default(T);
-
-                return false;
-            }
+            return returnValue.Key;
         }
 
         public static bool FindBefore<T>(this SortedSet<T> set, T key, out T value)
         {
-            if (set.Count == 0)
-            {
-                value = default(T);
+            var returnValue = SortedSetHelper<T>.Instance.FindBefore(set, key);
 
-                return false;
-            }
+            value = returnValue.Value;
 
-            if (set.Comparer.Compare(key, set.Min) < 0)
-            {
-                value = default(T);
-
-                return false;
-            }
-
-            var subSetEnumerator = set.GetViewBetween(set.Min, key).Reverse().GetEnumerator();
-            subSetEnumerator.MoveNext();
-            var prev = subSetEnumerator.Current;
-
-            if (set.Comparer.Compare(key, prev) != 0)
-            {
-                value = prev;
-
-                return true;
-            }
-
-            if (subSetEnumerator.MoveNext())
-            {
-                value = subSetEnumerator.Current;
-
-                return true;
-            }
-            else
-            {
-                value = default(T);
-
-                return false;
-            }
+            return returnValue.Key;
         }
 
         /// <summary>
