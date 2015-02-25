@@ -25,8 +25,19 @@ IData is a summary name of a developed standalone API designed for ultra-fast bi
 
 * Speed - Ultra-fast serialization and comparison of data.
 * Compactness - The most space efficient serialization library.
-* Simplicity - Designed for ease-of-use. The simplest and most powerful serialization library on the market.
+* Simplicity - Designed for ease-of-use. The simplest and most powerful serialization library available.
 
 ## Performance
 
-The IData technology is 15х times faster than BinaryFormater by Microsoft, 3x times faster than Protocol Buffers by Google and 6x times faster than MessagePack by Sadayuki Furuhashi when reading and writing. The output size is 35% smaller than BinaryFormater, 20% smaller than that Protocol Buffers and 10% smaller than MessagePack.
+The IData technology is:
+
+ * 15х times faster than BinaryFormater by Microsoft.
+ * 3x times faster than Protocol Buffers by Google
+ * 6x times faster than MessagePack by Sadayuki Furuhashi. 
+ * 
+The output size is:
+* 35% smaller than BinaryFormater.
+* 20% smaller than that Protocol Buffers.
+* 10% smaller than MessagePack.
+
+Detailed performance figures can be found here: http://stssoft.com/forum/threads/459-Persist-lt-T-gt-fast-objects-serialization
