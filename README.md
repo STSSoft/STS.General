@@ -41,4 +41,4 @@ The output size is:
 * 20% smaller than that Protocol Buffers.
 * 10% smaller than MessagePack.
 
-Detailed performance figures can be found here: http://stssoft.com/forum/threads/459-Persist-lt-T-gt-fast-objects-serialization
+Detailed performance figures can be found here: http://stssoft.com/forum/threads/459-Persist-lt-T-gt-fast-objects-serialization.
