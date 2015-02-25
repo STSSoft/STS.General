@@ -21,4 +21,12 @@ STS.General is also the "home" of the IData technology: http://stssoft.com/techn
 
 IData is a summary name of a developed standalone API designed for ultra-fast binary serialization and comparison of user data. The IData technology is deeply integrated into the STSdb 4.0 engine and is one of the main reasons for the speed of STSdb.
 
-The IData technology is 15х times faster than BinaryFormater by Microsoft, 3x times faster than Protocol Buffers by Google and 6x times faster than MessagePack by Sadayuki Furuhashi when reading and writing. The output size is 35% smaller than BinaryFormater , 20% smaller than that Protocol Buffers and 10% smaller than MessagePack.
+## Features
+
+* Speed - Ultra-fast serialization and comparison of data.
+* Compactness - The most space efficient serialization library.
+* Simplicity - Designed for ease-of-use. The simplest and most powerful serialization library on the market.
+
+## Performance
+
+The IData technology is 15х times faster than BinaryFormater by Microsoft, 3x times faster than Protocol Buffers by Google and 6x times faster than MessagePack by Sadayuki Furuhashi when reading and writing. The output size is 35% smaller than BinaryFormater, 20% smaller than that Protocol Buffers and 10% smaller than MessagePack.
