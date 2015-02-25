@@ -31,11 +31,12 @@ IData is a summary name of a developed standalone API designed for ultra-fast bi
 
 The IData technology is:
 
- * 15х times faster than BinaryFormater by Microsoft.
- * 3x times faster than Protocol Buffers by Google
- * 6x times faster than MessagePack by Sadayuki Furuhashi. 
- * 
+* 15х times faster than BinaryFormater by Microsoft.
+* 3x times faster than Protocol Buffers by Google
+* 6x times faster than MessagePack by Sadayuki Furuhashi. 
+ 
 The output size is:
+
 * 35% smaller than BinaryFormater.
 * 20% smaller than that Protocol Buffers.
 * 10% smaller than MessagePack.
