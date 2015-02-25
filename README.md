@@ -3,10 +3,19 @@
 The STS.General library contains common components shared amongst most of the applications developed by STS Soft.
 The provided wide set of general methods, tools and collections have been strongly optimized for performance and are some of the fastest solutions a developer can find.
 
-Some of the classes have been thoroughly explained in our STS Labs section: http://stssoft.com/forum/forums/21-STS-Labs
+Some of the most avant-garde developments are:
 
+* Fast binary serialization tools.
+* Fast comparer tools (Comparer and EqualityComparer).
+* Fast comparers for byte arrays.
+* Methods for accessing private members in C#.
+* Many ultra-fast extensions - for SortedSet<T>, List<T>, KeyValuePair<T> and etc.
+* FastBinaryWriter and FastBinaryReader classes which are ~ 10-20% faster than the Microsoft's implementations.
+* And many more.
 
-# IData
+Thorough explaination for some of the classes can be found in our STS Labs section: http://stssoft.com/forum/forums/21-STS-Labs.
+
+# IData technology
 
 STS.General is also the "home" of the IData technology: http://stssoft.com/technologies/idata/.
 
