@@ -37,7 +37,7 @@ namespace STS.General.Diagnostics
             timer = new Timer(DoMonitor, null, Timeout.Infinite, MonitorPeriodInMilliseconds);
         }
 
-        public MemoryMonitor(int monitorPeriodInMilliseconds = 500)
+        public MemoryMonitor(int monitorPeriodInMilliseconds = 1000)
             : this(true, true, true, monitorPeriodInMilliseconds)
         {
         }
@@ -48,26 +48,26 @@ namespace STS.General.Diagnostics
 
             if (monitorPagedMemory)
             {
-                CurrentPagedMemory = CurrentProcess.PagedMemorySize64;
+                PagedMemory = CurrentProcess.PagedMemorySize64;
 
-                if (CurrentPagedMemory > PeakPagedMemory)
-                    PeakPagedMemory = CurrentPagedMemory;
+                if (PagedMemory > PeakPagedMemory)
+                    PeakPagedMemory = PagedMemory;
             }
 
             if (monitorWorkingSet)
             {
-                CurrentWorkingSet = CurrentProcess.WorkingSet64;
+                WorkingSet = CurrentProcess.WorkingSet64;
 
-                if (CurrentWorkingSet > PeakWorkingSet)
-                    PeakWorkingSet = CurrentWorkingSet;
+                if (WorkingSet > PeakWorkingSet)
+                    PeakWorkingSet = WorkingSet;
             }
 
             if (monitorVirtualMemory)
             {
-                CurrentVirtualMemory = CurrentProcess.VirtualMemorySize64;
+                VirtualMemory = CurrentProcess.VirtualMemorySize64;
 
-                if (CurrentVirtualMemory > PeakVirtualMemory)
-                    PeakVirtualMemory = CurrentVirtualMemory;
+                if (VirtualMemory > PeakVirtualMemory)
+                    PeakVirtualMemory = VirtualMemory;
             }
         }
 
@@ -83,13 +83,13 @@ namespace STS.General.Diagnostics
 
         public void Reset()
         {
+            PagedMemory = 0;
+            WorkingSet = 0;
+            VirtualMemory = 0;
+
             PeakPagedMemory = 0;
             PeakWorkingSet = 0;
             PeakVirtualMemory = 0;
-
-            CurrentPagedMemory = 0;
-            CurrentWorkingSet = 0;
-            CurrentVirtualMemory = 0;
         }
 
         /// <summary>
@@ -105,29 +105,34 @@ namespace STS.General.Diagnostics
             }
         }
 
-        public long CurrentPagedMemory { get; set; }
-        public long CurrentWorkingSet { get; set; }
-        public long CurrentVirtualMemory { get; set; }
+        /// <summary>
+        /// The amount of memory, in bytes, the system has allocated for the associated
+        //  process that can be written to the virtual memory paging file.
+        /// </summary>
+        public long PagedMemory { get; private set; }
 
         /// <summary>
-        /// Shows the maximum amount of virtual memory, in bytes, that a process has reserved for use in the paging file(s). 
-        /// Paging files are used to store pages of memory used by the process. Paging files are shared by all processes, 
-        /// and the lack of space in paging files can prevent other processes from allocating memory. 
-        /// If there is no paging file, this counter reflects the maximum amount of virtual memory that the process has reserved for use in physical memory.
+        /// The amount of physical memory, in bytes, allocated for the associated process.
+        /// </summary>
+        public long WorkingSet { get; private set; }
+
+        /// <summary>
+        /// The total amount of physical memory the associated process is using, in bytes.
+        /// </summary>
+        public long VirtualMemory { get; private set; }
+
+        /// <summary>
+        /// Gets the peak paged memory value.
         /// </summary>
         public long PeakPagedMemory { get; private set; }
 
         /// <summary>
-        /// Shows the maximum size, in bytes, in the working set of this process. The working set is the set of memory pages that were touched recently by the threads in the process.
-        /// If free memory in the computer is above a certain threshold, pages are left in the working set of a process, even if they are not in use. When free memory falls below a certain threshold, pages are trimmed from working sets. 
-        /// If the pages are needed, they will be soft-faulted back into the working set before leaving main memory.
+        /// Gets the peak working set value.
         /// </summary>
         public long PeakWorkingSet { get; private set; }
 
         /// <summary>
-        /// Shows the maximum size, in bytes, of virtual address space that the process has used at any one time. 
-        /// Use of virtual address space does not necessarily imply corresponding use of either disk or main memory pages. 
-        /// However, virtual space is finite, and the process might limit its ability to load libraries by using too much.
+        /// Gets the peak virtual memory value.
         /// </summary>
         public long PeakVirtualMemory { get; private set; }
     }

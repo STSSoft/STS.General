@@ -23,16 +23,6 @@ namespace STS.General.Diagnostics
         private bool monitorIOReads;
         private bool monitorIOData;
 
-        private long sampleCounter;
-
-        private float totalIOWrites;
-        private float totalIOReads;
-        private float totalIOData;
-
-        private float averageIOWrites;
-        private float averageIOReads;
-        private float averageIOData;
-
         private long monitorPerionInMilliseconds;
 
         public IOMonitor(bool monitorIOWrites, bool monitorIOReads, bool monitorIOData, int monitorPeriodInMilliseconds)
@@ -65,30 +55,28 @@ namespace STS.General.Diagnostics
 
         private void DoMonitor(object state)
         {
-            sampleCounter++;
-
             if (monitorIOWrites)
             {
                 IOWriteBytes = writesCounter.NextValue();
 
-                totalIOWrites += IOWriteBytes;
-                averageIOWrites = totalIOWrites / sampleCounter;
+                if (IOWriteBytes > PeakIOWriteBytes)
+                    PeakIOWriteBytes = IOWriteBytes;
             }
 
             if (monitorIOReads)
             {
                 IOReadBytes = readsCounter.NextValue();
 
-                totalIOReads += IOReadBytes;
-                averageIOReads = totalIOReads / sampleCounter;
+                if (IOReadBytes > PeakIOReadBytes)
+                    PeakIOReadBytes = IOReadBytes;
             }
 
             if (monitorIOData)
             {
                 IODataBytes = dataCounter.NextValue();
 
-                totalIOData += IODataBytes;
-                averageIOData = totalIOData / sampleCounter;
+                if (IODataBytes > PeakIODataBytes)
+                    PeakIODataBytes = IODataBytes;
             }
         }
 
@@ -108,15 +96,9 @@ namespace STS.General.Diagnostics
             IOReadBytes = 0;
             IODataBytes = 0;
 
-            sampleCounter = 0;
-
-            totalIOWrites = 0;
-            totalIOReads = 0;
-            totalIOData = 0;
-
-            averageIOWrites = 0;
-            averageIOReads = 0;
-            averageIOData = 0;
+            PeakIOWriteBytes = 0;
+            PeakIOReadBytes = 0;
+            PeakIODataBytes = 0;
         }
 
         /// <summary>
@@ -151,27 +133,18 @@ namespace STS.General.Diagnostics
         public float IODataBytes { get; private set; }
 
         /// <summary>
-        /// Gets the average IOWriteBytes.
+        /// Gets the peak I/O write bytes value.
         /// </summary>
-        public float AverageIOWriteBytes 
-        {
-            get { return averageIOWrites; }
-        }
+        public float PeakIOWriteBytes { get; private set; }
 
         /// <summary>
-        /// Gets the average IOReadBytes.
+        /// Gets the peak I/O read bytes value.
         /// </summary>
-        public float AverageIOReadBytes
-        {
-            get { return averageIOReads; }
-        }
+        public float PeakIOReadBytes { get; private set; }
 
         /// <summary>
-        /// Gets the average IODataBytes.
+        /// Gets the peak I/O data bytes value.
         /// </summary>
-        public float AverageIODataBytes 
-        {
-            get { return averageIOData; }
-        }
+        public float PeakIODataBytes { get; private set; }
     }
 }

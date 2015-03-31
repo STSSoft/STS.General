@@ -11,7 +11,7 @@ namespace STS.General.Diagnostics
     /// <summary>
     /// Provides CPU usage monitoring for a process.
     /// </summary>
-    public class ProcessorMonitor
+    public class CpuMonitor
     {
         private Timer timer;
 
@@ -23,71 +23,60 @@ namespace STS.General.Diagnostics
         private bool monitorProcessorTime;
         private bool monitorUserTime;
 
-        private long sampleCounter;
-
-        private float totalPrivilegedTime;
-        private float totalProcessorTime;
-        private float totalUserTime;
-
-        private float averagePrivilegedTime;
-        private float averageProcessorTime;
-        private float averageUserTime;
-
         private int monitorPeriodInMilliseconds;
 
-        public ProcessorMonitor(bool monitorPagedMemory, bool monitorWorkingSet, bool monitorVirtualMemory, int monitorPeriodInMilliseconds = 500)
+        public CpuMonitor(bool monitorPrivilegedTime, bool monitorProcessorTime, bool monitorUserTime, int monitorPeriodInMilliseconds = 500)
         {
-            if (!monitorPagedMemory && !monitorWorkingSet && !monitorVirtualMemory)
+            if (!monitorPrivilegedTime && !monitorProcessorTime && !monitorUserTime)
                 throw new ArgumentException("At least one flag has to be true.");
 
-            this.monitorPrivilegedTime = monitorPagedMemory;
-            this.monitorProcessorTime = monitorWorkingSet;
-            this.monitorUserTime = monitorVirtualMemory;
+            this.monitorPrivilegedTime = monitorPrivilegedTime;
+            this.monitorProcessorTime = monitorProcessorTime;
+            this.monitorUserTime = monitorUserTime;
+
             this.monitorPeriodInMilliseconds = monitorPeriodInMilliseconds;
 
             string processName = Process.GetCurrentProcess().ProcessName;
 
-            if (monitorPagedMemory)
+            if (monitorPrivilegedTime)
                 privilegedTimeCounter = new PerformanceCounter("Process", "% Privileged Time", processName);
-            if (monitorWorkingSet)
+            if (monitorProcessorTime)
                 processorTimeCounter = new PerformanceCounter("Process", "% Processor Time", processName);
-            if (monitorVirtualMemory)
+            if (monitorUserTime)
                 userTimeCounter = new PerformanceCounter("Process", "% User Time", processName);
 
             timer = new Timer(DoMonitor, null, Timeout.Infinite, MonitorPeriodInMilliseconds);
         }
 
-        public ProcessorMonitor(int monitorPeriodInMilliseconds = 1000)
+        public CpuMonitor(int monitorPeriodInMilliseconds = 1000)
             : this(true, true, true, monitorPeriodInMilliseconds)
         {
         }
 
         private void DoMonitor(object state)
         {
-            sampleCounter++;
-
             if (monitorPrivilegedTime)
             {
-                PrivilegTimePercent = privilegedTimeCounter.NextValue() / System.Environment.ProcessorCount;
-                
-                totalPrivilegedTime += PrivilegTimePercent;
-                averagePrivilegedTime = totalUserTime / sampleCounter;
+                PrivilegedTime = privilegedTimeCounter.NextValue() / System.Environment.ProcessorCount;
+
+                if (PrivilegedTime > PeakPrivilegedTime)
+                    PeakPrivilegedTime = PrivilegedTime;
             }
 
             if (monitorProcessorTime)
             {
-                ProcessorTimePercent = processorTimeCounter.NextValue() / System.Environment.ProcessorCount;
+                ProcessorTime = processorTimeCounter.NextValue() / System.Environment.ProcessorCount;
 
-                totalProcessorTime += ProcessorTimePercent;
-                averageProcessorTime = totalProcessorTime / sampleCounter;
+                if (ProcessorTime > PeakProcessorTime)
+                    PeakProcessorTime = ProcessorTime;
             }
 
             if (monitorUserTime)
             {
-                UserTimePercent = userTimeCounter.NextValue() / System.Environment.ProcessorCount;
+                UserTime = userTimeCounter.NextValue() / System.Environment.ProcessorCount;
 
-                totalUserTime += UserTimePercent;
-                averageUserTime = totalUserTime / sampleCounter;
+                if (UserTime > PeakUserTime)
+                    PeakUserTime = UserTime;
             }
         }
 
@@ -103,19 +92,13 @@ namespace STS.General.Diagnostics
 
         public void Reset()
         {
-            PrivilegTimePercent = 0;
-            ProcessorTimePercent = 0;
-            UserTimePercent = 0;
+            PrivilegedTime = 0;
+            ProcessorTime = 0;
+            UserTime = 0;
 
-            sampleCounter = 0;
-
-            totalPrivilegedTime = 0;
-            totalProcessorTime = 0;
-            totalUserTime = 0;
-
-            averagePrivilegedTime = 0;
-            averageProcessorTime = 0;
-            averageUserTime = 0;
+            PeakPrivilegedTime = 0;
+            PeakProcessorTime = 0;
+            PeakUserTime = 0;
         }
 
         /// <summary>
@@ -137,44 +120,35 @@ namespace STS.General.Diagnostics
         /// It allows direct access to hardware and memory. The alternative, user mode, is a restricted processing mode designed for applications, 
         /// environmental subsystems, and integral subsystems. The operating system switches application threads to privileged mode to access operating system services.
         /// </summary>
-        public float PrivilegTimePercent { get; private set; }
+        public float PrivilegedTime { get; private set; }
 
         /// <summary>
         /// Shows the percentage of time that the processor spent executing a non-idle thread. 
         /// It is calculated by measuring the duration that the idle thread is active during the sample interval, 
         /// and subtracting that time from 100 %. (Each processor has an idle thread that consumes cycles when no other threads are ready to run.)
         /// </summary>
-        public float ProcessorTimePercent { get; private set; }
+        public float ProcessorTime { get; private set; }
 
         /// <summary>
         /// Shows the percentage of time that the processor spent executing code in user mode. 
         /// Applications, environment subsystems, and integral subsystems execute in user mode. 
         /// Code executing in user mode cannot damage the integrity of the Windows Executive, kernel, and/or device drivers.
         /// </summary>
-        public float UserTimePercent { get; private set; }
+        public float UserTime { get; private set; }
 
         /// <summary>
-        /// Gets the average PrivilegedTime.
+        /// Gets the peak privileged time value.
         /// </summary>
-        public float AveragePrivilegedTimePercent
-        {
-            get { return averagePrivilegedTime; }
-        }
+        public float PeakPrivilegedTime { get; private set; }
 
         /// <summary>
-        /// Gets the average ProcessorTime.
+        /// Gets the peak processor time value.
         /// </summary>
-        public float AverageProcessorTimePercent
-        {
-            get { return averageProcessorTime; }
-        }
+        public float PeakProcessorTime { get; private set; }
 
         /// <summary>
-        /// Gets the average UserTime.
+        /// Gets the peak user time value.
         /// </summary>
-        public float AverageUserTimePercent
-        {
-            get { return averageUserTime; }
-        }
+        public float PeakUserTime { get; private set; }
     }
 }
