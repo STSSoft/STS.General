@@ -52,7 +52,6 @@ namespace STS.General.Diagnostics
 
                 if (CurrentPagedMemory > PeakPagedMemory)
                     PeakPagedMemory = CurrentPagedMemory;
-                
             }
 
             if (monitorWorkingSet)
@@ -61,7 +60,6 @@ namespace STS.General.Diagnostics
 
                 if (CurrentWorkingSet > PeakWorkingSet)
                     PeakWorkingSet = CurrentWorkingSet;
-
             }
 
             if (monitorVirtualMemory)
@@ -88,6 +86,10 @@ namespace STS.General.Diagnostics
             PeakPagedMemory = 0;
             PeakWorkingSet = 0;
             PeakVirtualMemory = 0;
+
+            CurrentPagedMemory = 0;
+            CurrentWorkingSet = 0;
+            CurrentVirtualMemory = 0;
         }
 
         /// <summary>
