@@ -14,28 +14,11 @@ namespace STS.General.Diagnostics
     public class MemoryMonitor
     {
         private Timer timer;
-
-        private PerformanceCounter pagedMemoryCounter;
-        private PerformanceCounter workingSetCouter;
-        private PerformanceCounter virtualMemoryCounter;
+        private Process CurrentProcess;
 
         private bool monitorPagedMemory;
         private bool monitorWorkingSet;
         private bool monitorVirtualMemory;
-
-        private long sampleCounter;
-
-        private float currentPagedMemory;
-        private float currentWorkingSet;
-        private float currentVirtualMemory;
-
-        private float totalPagedMemory;
-        private float totalWorkingSet;
-        private float totalVirtualMemory;
-
-        private float averagePagedMemory;
-        private float averageWorkingSet;
-        private float averageVirtualMemory;
 
         private int monitorPeriodInMilliseconds;
 
@@ -49,14 +32,7 @@ namespace STS.General.Diagnostics
             this.monitorVirtualMemory = monitorVirtualMemory;
             this.monitorPeriodInMilliseconds = monitorPeriodInMilliseconds;
 
-            string processName = Process.GetCurrentProcess().ProcessName;
-
-            if (monitorPagedMemory)
-                pagedMemoryCounter = new PerformanceCounter("Process", "Page File Bytes", processName);
-            if (monitorWorkingSet)
-                workingSetCouter = new PerformanceCounter("Process", "Working Set", processName);
-            if (monitorVirtualMemory)
-                virtualMemoryCounter = new PerformanceCounter("Process", "Virtual Bytes", processName);
+            CurrentProcess = Process.GetCurrentProcess();
 
             timer = new Timer(DoMonitor, null, Timeout.Infinite, MonitorPeriodInMilliseconds);
         }
@@ -68,39 +44,32 @@ namespace STS.General.Diagnostics
 
         private void DoMonitor(object state)
         {
-            sampleCounter++;
+            CurrentProcess.Refresh();
 
             if (monitorPagedMemory)
             {
-                currentPagedMemory = pagedMemoryCounter.NextValue();
+                CurrentPagedMemory = CurrentProcess.PagedMemorySize64;
 
-                if (currentPagedMemory > PeakPagedMemory)
-                    PeakPagedMemory = currentPagedMemory;
+                if (CurrentPagedMemory > PeakPagedMemory)
+                    PeakPagedMemory = CurrentPagedMemory;
                 
-                totalPagedMemory += currentPagedMemory;
-                averagePagedMemory = totalPagedMemory / sampleCounter;
             }
 
             if (monitorWorkingSet)
             {
-                currentWorkingSet = workingSetCouter.NextValue();
+                CurrentWorkingSet = CurrentProcess.WorkingSet64;
 
-                if (currentWorkingSet > PeakWorkingSet)
-                    PeakWorkingSet = currentWorkingSet;
+                if (CurrentWorkingSet > PeakWorkingSet)
+                    PeakWorkingSet = CurrentWorkingSet;
 
-                totalWorkingSet += currentWorkingSet;
-                averageWorkingSet = totalWorkingSet / sampleCounter;
             }
 
             if (monitorVirtualMemory)
             {
-                currentVirtualMemory = virtualMemoryCounter.NextValue();
+                CurrentVirtualMemory = CurrentProcess.VirtualMemorySize64;
 
-                if (currentVirtualMemory > PeakVirtualMemory)
-                    PeakVirtualMemory = currentVirtualMemory;
-
-                totalVirtualMemory += currentVirtualMemory;
-                averageVirtualMemory = totalVirtualMemory / sampleCounter;
+                if (CurrentVirtualMemory > PeakVirtualMemory)
+                    PeakVirtualMemory = CurrentVirtualMemory;
             }
         }
 
@@ -119,16 +88,6 @@ namespace STS.General.Diagnostics
             PeakPagedMemory = 0;
             PeakWorkingSet = 0;
             PeakVirtualMemory = 0;
-
-            sampleCounter = 0;
-
-            totalPagedMemory = 0;
-            totalWorkingSet = 0;
-            totalVirtualMemory = 0;
-
-            averagePagedMemory = 0;
-            averageWorkingSet = 0;
-            averageVirtualMemory = 0;
         }
 
         /// <summary>
@@ -144,50 +103,30 @@ namespace STS.General.Diagnostics
             }
         }
 
+        public long CurrentPagedMemory { get; set; }
+        public long CurrentWorkingSet { get; set; }
+        public long CurrentVirtualMemory { get; set; }
+
         /// <summary>
         /// Shows the maximum amount of virtual memory, in bytes, that a process has reserved for use in the paging file(s). 
         /// Paging files are used to store pages of memory used by the process. Paging files are shared by all processes, 
         /// and the lack of space in paging files can prevent other processes from allocating memory. 
         /// If there is no paging file, this counter reflects the maximum amount of virtual memory that the process has reserved for use in physical memory.
         /// </summary>
-        public float PeakPagedMemory { get; private set; }
+        public long PeakPagedMemory { get; private set; }
 
         /// <summary>
         /// Shows the maximum size, in bytes, in the working set of this process. The working set is the set of memory pages that were touched recently by the threads in the process.
         /// If free memory in the computer is above a certain threshold, pages are left in the working set of a process, even if they are not in use. When free memory falls below a certain threshold, pages are trimmed from working sets. 
         /// If the pages are needed, they will be soft-faulted back into the working set before leaving main memory.
         /// </summary>
-        public float PeakWorkingSet { get; private set; }
+        public long PeakWorkingSet { get; private set; }
 
         /// <summary>
         /// Shows the maximum size, in bytes, of virtual address space that the process has used at any one time. 
         /// Use of virtual address space does not necessarily imply corresponding use of either disk or main memory pages. 
         /// However, virtual space is finite, and the process might limit its ability to load libraries by using too much.
         /// </summary>
-        public float PeakVirtualMemory { get; private set; }
-
-        /// <summary>
-        /// Gets the average PeakPagedMemory.
-        /// </summary>
-        public float AveragePagedMemory
-        {
-            get { return averagePagedMemory; }
-        }
-
-        /// <summary>
-        /// Gets the average PeakWorkingSet.
-        /// </summary>
-        public float AverageWorkingSet
-        {
-            get { return averageWorkingSet; }
-        }
-
-        /// <summary>
-        /// Gets the average PeakVirtualMemory.
-        /// </summary>
-        public float AverageVirtualMemory
-        {
-            get { return averageVirtualMemory; }
-        }
+        public long PeakVirtualMemory { get; private set; }
     }
 }
