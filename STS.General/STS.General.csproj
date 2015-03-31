@@ -158,7 +158,7 @@
     <Compile Include="Data\ValueToString.cs" />
     <Compile Include="Diagnostics\IOMonitor.cs" />
     <Compile Include="Diagnostics\MemoryMonitor.cs" />
-    <Compile Include="Diagnostics\CpuMonitor.cs" />
+    <Compile Include="Diagnostics\CPUMonitor.cs" />
     <Compile Include="Environment.cs" />
     <Compile Include="Extensions\BinaryReaderExtensions.cs" />
     <Compile Include="Extensions\BinaryWriterExtensions.cs" />

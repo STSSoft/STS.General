@@ -11,7 +11,7 @@ namespace STS.General.Diagnostics
     /// <summary>
     /// Provides CPU usage monitoring for a process.
     /// </summary>
-    public class CpuMonitor
+    public class CPUMonitor
     {
         private Timer timer;
 
@@ -25,7 +25,7 @@ namespace STS.General.Diagnostics
 
         private int monitorPeriodInMilliseconds;
 
-        public CpuMonitor(bool monitorPrivilegedTime, bool monitorProcessorTime, bool monitorUserTime, int monitorPeriodInMilliseconds = 500)
+        public CPUMonitor(bool monitorPrivilegedTime, bool monitorProcessorTime, bool monitorUserTime, int monitorPeriodInMilliseconds = 500)
         {
             if (!monitorPrivilegedTime && !monitorProcessorTime && !monitorUserTime)
                 throw new ArgumentException("At least one flag has to be true.");
@@ -48,7 +48,7 @@ namespace STS.General.Diagnostics
             timer = new Timer(DoMonitor, null, Timeout.Infinite, MonitorPeriodInMilliseconds);
         }
 
-        public CpuMonitor(int monitorPeriodInMilliseconds = 1000)
+        public CPUMonitor(int monitorPeriodInMilliseconds = 1000)
             : this(true, true, true, monitorPeriodInMilliseconds)
         {
         }
