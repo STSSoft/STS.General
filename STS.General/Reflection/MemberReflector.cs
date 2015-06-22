@@ -53,7 +53,13 @@ namespace STS.General.Reflection
 
         private static MemberInfo FindMember(Type type, string memberName)
         {
-            MemberInfo[] members = type.GetMembers(BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+            MemberInfo[] members;
+
+#if NETFX_CORE
+            members = type.GetMembers();
+#else
+            members = type.GetMembers(BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+#endif
 
             var memberInfo = members.Where(x => x.Name == memberName).FirstOrDefault();
             if (memberInfo == null)
@@ -158,7 +164,13 @@ namespace STS.General.Reflection
 
         private static MemberInfo FindMember(Type type, string memberName)
         {
-            MemberInfo[] members = type.GetMembers(BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+            MemberInfo[] members;
+
+#if NETFX_CORE
+            members = type.GetMembers();
+#else
+            members = type.GetMembers(BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+#endif
 
             var memberInfo = members.Where(x => x.Name == memberName).FirstOrDefault();
             if (memberInfo == null)

@@ -373,6 +373,13 @@ namespace STS.General.Data
             return !(type1 == type2);
         }
 
+#if NETFX_CORE
+        public static int GetTypeCode(Type type)
+        {
+            return (int)primitiveMap[type].code;
+        }
+#endif
+
         private enum Code : byte
         {
             Boolean = TypeCode.Boolean,     // 3  

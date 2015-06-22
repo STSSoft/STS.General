@@ -10,6 +10,7 @@ using System.Text;
 
 namespace STS.General.Data
 {
+#if !NETFX_CORE
     public class SlotsBuilder
     {
         private static ConcurrentDictionary<TypeArray, Type> map = new ConcurrentDictionary<TypeArray, Type>();
@@ -226,4 +227,5 @@ namespace STS.General.Data
             }
         }
     }
+#endif
 }

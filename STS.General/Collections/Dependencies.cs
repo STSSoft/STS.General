@@ -36,7 +36,15 @@ namespace STS.General.Collections
         {
         }
 
-        public void Add(T item, params T[] references)
+		private void Delete(T item)
+		{
+			map.Remove(item);
+
+			if (OnRemoved != null)
+				OnRemoved(item);
+		}
+
+		public void Add(T item, params T[] references)
         {
             if (references.Length == 0)
                 return;
@@ -55,14 +63,6 @@ namespace STS.General.Collections
                 return;
 
             node.ClearReferences();
-        }
-
-        private void Delete(T item)
-        {
-            map.Remove(item);
-
-            if (OnRemoved != null)
-                OnRemoved(item);
         }
 
         public T[] GetReferences(T item)

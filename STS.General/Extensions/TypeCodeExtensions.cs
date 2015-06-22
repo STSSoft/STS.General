@@ -5,6 +5,7 @@ using System.Text;
 
 namespace STS.General.Extensions
 {
+#if !NETFX_CORE
     public static class TypeCodeExtensions
     {
         private static Type[] types = new Type[19];
@@ -35,4 +36,5 @@ namespace STS.General.Extensions
             return types[(int)self];
         }
     }
+#endif
 }

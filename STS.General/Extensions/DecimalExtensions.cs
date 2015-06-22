@@ -77,7 +77,15 @@ namespace STS.General.Extensions
             var hi = Expression.Parameter(typeof(int), "hi");
             var flags = Expression.Parameter(typeof(int), "flags");
 
-            var constructor = Expression.New(typeof(decimal).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { typeof(int), typeof(int), typeof(int), typeof(int) }, null), lo, mid, hi, flags);
+            ConstructorInfo decimalConstructor;
+
+#if NETFX_CORE
+            decimalConstructor = typeof(decimal).GetConstructor(new Type[] { typeof(int), typeof(int), typeof(int), typeof(int) });
+#else
+            decimalConstructor = typeof(decimal).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { typeof(int), typeof(int), typeof(int), typeof(int) }, null);
+#endif
+
+            var constructor = Expression.New(decimalConstructor, lo, mid, hi, flags);
 
             //return new Decimal(lo, mid, hi, flags);
 

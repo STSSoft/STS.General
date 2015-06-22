@@ -81,6 +81,17 @@ namespace STS.General.Collections
             }
         }
 
+        public T NextPeek
+        {
+            get
+            {
+                if (Count < 2)
+                    throw new ArgumentException("Count < 2");
+
+                return Items[GetMinIndex(1, 2)];
+            }
+        }
+
         private void PercolateUp(int index)
         {
             while (index > 0)

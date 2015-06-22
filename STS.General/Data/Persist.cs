@@ -142,8 +142,8 @@ namespace STS.General.Data
             if (type == typeof(Guid))
                 return GetWriteCommand(writer, Expression.Call(item, type.GetMethod("ToByteArray")), canBeNull);
 
-            if (type.IsEnum)
-                return GetWriteCommand(writer, Expression.Convert(item, item.Type.GetEnumUnderlyingType()), canBeNull);
+            if (type.IsEnum())
+                return GetWriteCommand(writer, Expression.Convert(item, item.Type.GetEnumBaseType()), canBeNull);
 
             if (DataType.IsPrimitiveType(type))
                 return GetWriteCommand(writer, item, canBeNull);
@@ -177,7 +177,7 @@ namespace STS.General.Data
 
             if (type.IsDictionary())
             {
-                var keyType = type.GetGenericArguments()[0];
+                var keyType = type.GetGenericArgument(0);
 
                 if (!IsSupportDictionaryKeyType(keyType))
                     throw new NotSupportedException(String.Format("Dictionarty<{0}, TValue>", keyType.ToString()));
@@ -222,11 +222,11 @@ namespace STS.General.Data
 
                 return Expression.Block(
                         Expression.Call(writer, typeof(BinaryWriter).GetMethod("Write", new Type[] { typeof(bool) }), Expression.PropertyOrField(item, "HasValue")),
-                        Expression.IfThen(Expression.PropertyOrField(item, "HasValue"), 
+                        Expression.IfThen(Expression.PropertyOrField(item, "HasValue"),
                             BuildWrite(Expression.PropertyOrField(item, "Value"), writer, membersOrder, allowNull, depth + 1)));
             }
 
-            if (type.IsClass || type.IsStruct())
+            if (type.IsClass() || type.IsStruct())
             {
                 List<ParameterExpression> variables = new List<ParameterExpression>();
                 List<Expression> list = new List<Expression>();
@@ -268,7 +268,7 @@ namespace STS.General.Data
         {
             var type = item.Type;
 
-            if (type == typeof(Guid) || type.IsEnum || DataType.IsPrimitiveType(type))
+            if (type == typeof(Guid) || type.IsEnum() || DataType.IsPrimitiveType(type))
                 return BuildWrite(item, writer, membersOrder, allowNull, depth);
 
             ParameterExpression @var = Expression.Variable(type);
@@ -375,8 +375,8 @@ namespace STS.General.Data
             if (itemType == typeof(Guid))
                 return Expression.New(itemType.GetConstructor(new Type[] { typeof(byte[]) }), GetReadCommand(reader, typeof(byte[]), canBeNull));
 
-            if (itemType.IsEnum)
-                return Expression.Convert(GetReadCommand(reader, itemType.GetEnumUnderlyingType(), canBeNull), itemType);
+            if (itemType.IsEnum())
+                return Expression.Convert(GetReadCommand(reader, itemType.GetEnumBaseType(), canBeNull), itemType);
 
             if (DataType.IsPrimitiveType(itemType))
                 return GetReadCommand(reader, itemType, canBeNull);
@@ -384,8 +384,8 @@ namespace STS.General.Data
             if (itemType.IsKeyValuePair())
             {
                 return Expression.New(
-                        itemType.GetConstructor(new Type[] { itemType.GetGenericArguments()[0], itemType.GetGenericArguments()[1] }),
-                        BuildRead(reader, itemType.GetGenericArguments()[0], membersOrder, allowNull, depth + 1), BuildRead(reader, itemType.GetGenericArguments()[1], membersOrder, allowNull, depth + 1)
+                        itemType.GetConstructor(new Type[] { itemType.GetGenericArgument(0), itemType.GetGenericArgument(1) }),
+                        BuildRead(reader, itemType.GetGenericArgument(0), membersOrder, allowNull, depth + 1), BuildRead(reader, itemType.GetGenericArgument(1), membersOrder, allowNull, depth + 1)
                     );
             }
 
@@ -396,28 +396,28 @@ namespace STS.General.Data
 
                 var block = Expression.Block(
                     Expression.Assign(lenght, Expression.Convert(Expression.Call(typeof(CountCompression).GetMethod("Deserialize"), reader), typeof(int))),
-                    itemType.IsDictionary() && itemType.GetGenericArguments()[0] == typeof(byte[]) ?
+                    itemType.IsDictionary() && itemType.GetGenericArgument(0) == typeof(byte[]) ?
                         Expression.Assign(field, Expression.New(field.Type.GetConstructor(new Type[] { typeof(int), typeof(IEqualityComparer<byte[]>) }), lenght, Expression.Field(null, typeof(BigEndianByteArrayEqualityComparer), "Instance"))) :
                         Expression.Assign(field, Expression.New(field.Type.GetConstructor(new Type[] { typeof(int) }), lenght)),
                     field.For(i =>
+                    {
+                        if (itemType.IsArray)
+                            return Expression.Assign(Expression.ArrayAccess(field, i), BuildRead(reader, itemType.GetElementType(), membersOrder, allowNull, depth + 1));
+                        else if (itemType.IsList())
+                            return Expression.Call(field, field.Type.GetMethod("Add"), BuildRead(reader, itemType.GetGenericArgument(0), membersOrder, allowNull, depth + 1));
+                        else //if (dataType.IsDictionary)                   
                         {
-                            if (itemType.IsArray)
-                                return Expression.Assign(Expression.ArrayAccess(field, i), BuildRead(reader, itemType.GetElementType(), membersOrder, allowNull, depth + 1));
-                            else if (itemType.IsList())
-                                return Expression.Call(field, field.Type.GetMethod("Add"), BuildRead(reader, itemType.GetGenericArguments()[0], membersOrder, allowNull, depth + 1));
-                            else //if (dataType.IsDictionary)                   
-                            {
-                                var keyType = itemType.GetGenericArguments()[0];
+                            var keyType = itemType.GetGenericArgument(0);
 
-                                if (!IsSupportDictionaryKeyType(keyType))
-                                    throw new NotSupportedException(String.Format("Dictionarty<{0}, TValue>", keyType.ToString()));
+                            if (!IsSupportDictionaryKeyType(keyType))
+                                throw new NotSupportedException(String.Format("Dictionarty<{0}, TValue>", keyType.ToString()));
 
-                                return Expression.Call(field, field.Type.GetMethod("Add"),
-                                    BuildRead(reader, itemType.GetGenericArguments()[0], membersOrder, allowNull, depth + 1),
-                                    BuildRead(reader, itemType.GetGenericArguments()[1], membersOrder, allowNull, depth + 1)
-                                    );
-                            }
-                        },
+                            return Expression.Call(field, field.Type.GetMethod("Add"),
+                                BuildRead(reader, itemType.GetGenericArgument(0), membersOrder, allowNull, depth + 1),
+                                BuildRead(reader, itemType.GetGenericArgument(1), membersOrder, allowNull, depth + 1)
+                                );
+                        }
+                    },
                         Expression.Label(), lenght)
                     );
 
@@ -436,14 +436,14 @@ namespace STS.General.Data
             if (itemType.IsNullable())
             {
                 if (!canBeNull)
-                    return Expression.New(itemType.GetConstructor(new Type[] { itemType.GetGenericArguments()[0] }), BuildRead(reader, itemType.GetGenericArguments()[0], membersOrder, allowNull, depth + 1));
+                    return Expression.New(itemType.GetConstructor(new Type[] { itemType.GetGenericArgument(0) }), BuildRead(reader, itemType.GetGenericArgument(0), membersOrder, allowNull, depth + 1));
 
                 return Expression.Condition(Expression.Call(reader, typeof(BinaryReader).GetMethod("ReadBoolean")),
-                        Expression.New(itemType.GetConstructor(new Type[] { itemType.GetGenericArguments()[0] }), BuildRead(reader, itemType.GetGenericArguments()[0], membersOrder, allowNull, depth + 1)),
+                        Expression.New(itemType.GetConstructor(new Type[] { itemType.GetGenericArgument(0) }), BuildRead(reader, itemType.GetGenericArgument(0), membersOrder, allowNull, depth + 1)),
                         Expression.Constant(null, itemType));
             }
 
-            if (itemType.IsClass || itemType.IsStruct())
+            if (itemType.IsClass() || itemType.IsStruct())
             {
                 var item = Expression.Variable(itemType);
 
@@ -536,7 +536,7 @@ namespace STS.General.Data
             //if (type == typeof(Guid))
             //    return false;
 
-            if (type.IsEnum)
+            if (type.IsEnum())
                 return false;
 
             if (type.IsStruct() && !type.IsNullable())
@@ -553,7 +553,7 @@ namespace STS.General.Data
             if (type == typeof(Guid))
                 return true;
 
-            if(type.IsEnum)
+            if (type.IsEnum())
                 return true;
 
             if (DataType.IsPrimitiveType(type))

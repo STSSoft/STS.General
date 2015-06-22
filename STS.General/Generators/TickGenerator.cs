@@ -18,6 +18,8 @@ namespace STS.General.Generators
         private double[] prices;
         private string[] providers;
 
+        private static DateTime MaxDateTime = DateTime.MaxValue.AddSeconds(-30);
+
         public TickGenerator()
         {
             //2013-11-12 13:00 
@@ -63,7 +65,11 @@ namespace STS.General.Generators
             int seconds = random.Next(1, 30);
 
             //random values
-            dateTime = dateTime.AddSeconds(seconds);
+            if (dateTime < MaxDateTime)
+                dateTime = dateTime.AddSeconds(seconds);
+            else
+                dateTime = DateTime.Now;
+
             double bid = Math.Round(prices[id] + direction * pips * pipSize, d);
             double ask = Math.Round(bid + spread * pipSize, d);
             int bidSize = random.Next(0, 10000);

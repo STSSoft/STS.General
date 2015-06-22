@@ -124,14 +124,14 @@ namespace STS.General.Collections
             }
         }
 
-        public bool FindNext(TKey key, out TValue value)
+        public bool FindNext(TKey key, out KeyValuePair<TKey, List<TValue>> values)
         {
-            value = default(TValue);
+            values = default(KeyValuePair<TKey, List<TValue>>);
 
             Node node;
             if (Set.FindNext(new Node(EqualityComparer, key), out node))
             {
-                value = node.First();
+                values = new KeyValuePair<TKey, List<TValue>>(node.Key, node.ToList());
 
                 return true;
             }
@@ -139,14 +139,14 @@ namespace STS.General.Collections
             return false;
         }
 
-        public bool FindPrev(TKey key, out TValue value)
+        public bool FindPrev(TKey key, out KeyValuePair<TKey, List<TValue>> values)
         {
-            value = default(TValue);
+            values = default(KeyValuePair<TKey, List<TValue>>);
 
             Node node;
             if (Set.FindPrev(new Node(EqualityComparer, key), out node))
             {
-                value = node.First();
+                values = new KeyValuePair<TKey, List<TValue>>(node.Key, node.ToList());
 
                 return true;
             }
@@ -154,14 +154,14 @@ namespace STS.General.Collections
             return false;
         }
 
-        public bool FindAfter(TKey key, out TValue value)
+        public bool FindAfter(TKey key, out KeyValuePair<TKey, List<TValue>> values)
         {
-            value = default(TValue);
+            values = default(KeyValuePair<TKey, List<TValue>>);
 
             Node node;
             if (Set.FindAfter(new Node(EqualityComparer, key), out node))
             {
-                value = node.First();
+                values = new KeyValuePair<TKey, List<TValue>>(node.Key, node.ToList());
 
                 return true;
             }
@@ -169,14 +169,14 @@ namespace STS.General.Collections
             return false;
         }
 
-        public bool FindBefore(TKey key, out TValue value)
+        public bool FindBefore(TKey key, out KeyValuePair<TKey, List<TValue>> values)
         {
-            value = default(TValue);
+            values = default(KeyValuePair<TKey, List<TValue>>);
 
             Node node;
             if (Set.FindBefore(new Node(EqualityComparer, key), out node))
             {
-                value = node.First();
+                values = new KeyValuePair<TKey, List<TValue>>(node.Key, node.ToList());
 
                 return true;
             }
@@ -192,9 +192,6 @@ namespace STS.General.Collections
 
             return node.Count;
         }
-
-        public TValue Min { get { return Values.First(); } }
-        public TValue Max { get { return GetViewBetweenReverse(default(TKey), false, default(TKey), false).First().Value; } }
 
         public IEnumerable<TValue> Values
         {
@@ -220,6 +217,16 @@ namespace STS.General.Collections
         IEnumerator IEnumerable.GetEnumerator()
         {
             return this.GetEnumerator();
+        }
+
+        public TValue Min
+        {
+            get { return Values.First(); }
+        }
+
+        public TValue Max
+        {
+            get { return GetViewBetweenReverse(default(TKey), false, default(TKey), false).First().Value; }
         }
 
         private class Node : IEnumerable<TValue>

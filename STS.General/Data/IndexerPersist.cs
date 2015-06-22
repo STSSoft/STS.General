@@ -26,7 +26,7 @@ namespace STS.General.Data
             Type = typeof(T);
             Persists = persists;
             MembersOrder = membersOrder;
-            
+
             store = CreateStoreMethod().Compile();
             load = CreateLoadMethod().Compile();
         }
@@ -66,10 +66,10 @@ namespace STS.General.Data
                     Expression.Block(new ParameterExpression[] { array },
                     Expression.Assign(array, Expression.New(array.Type.GetConstructor(new Type[] { typeof(int) }), count)),
                     array.For(i =>
-                        {
-                            return Expression.Block(Expression.Assign(Expression.ArrayAccess(array, i), Expression.New(typeof(T).GetConstructor(new Type[] { }))),
-                                    Expression.Call(values, values.Type.GetMethod("Invoke"), i, Expression.ArrayAccess(array, i)));
-                        }, Expression.Label(), count),
+                    {
+                        return Expression.Block(Expression.Assign(Expression.ArrayAccess(array, i), Expression.New(typeof(T).GetConstructor(new Type[] { }))),
+                                Expression.Call(values, values.Type.GetMethod("Invoke"), i, Expression.ArrayAccess(array, i)));
+                    }, Expression.Label(), count),
                     IndexerPersistHelper.CreateLoadBody(Type, false, reader, array, count, MembersOrder, Persists)
                     );
 

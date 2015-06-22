@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.IO;
-using System.Reflection;
-using STS.General.Comparers;
+﻿using STS.General.Comparers;
 using STS.General.Extensions;
-using System.Windows.Forms;
+using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 
 namespace STS.General.Data
 {
@@ -85,7 +82,7 @@ namespace STS.General.Data
             if (type == typeof(Guid))
                 return new CompareOption[] { GetDefaultCompareOption(type) };
 
-            if (type.IsClass || type.IsStruct())
+            if (type.IsClass() || type.IsStruct())
                 return DataTypeUtils.GetPublicMembers(type, memberOrder).Select(x => GetDefaultCompareOption(x.GetUnderlyingType())).ToArray();
 
             throw new NotSupportedException(type.ToString());
@@ -115,7 +112,7 @@ namespace STS.General.Data
 
         public static void CheckCompareOptions(Type type, CompareOption[] compareOptions, Func<Type, MemberInfo, int> memberOrder = null)
         {
-            if (type.IsClass || type.IsStruct())
+            if (type.IsClass() || type.IsStruct())
             {
                 int i = 0;
                 foreach (var member in DataTypeUtils.GetPublicMembers(type, memberOrder).Select(x => x.GetUnderlyingType()).ToArray())

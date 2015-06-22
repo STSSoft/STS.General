@@ -6,6 +6,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+#if NETFX_CORE
+using Windows.System.Diagnostics;
+#endif
+
 namespace STS.General.Diagnostics
 {
     /// <summary>
@@ -14,7 +18,12 @@ namespace STS.General.Diagnostics
     public class MemoryMonitor
     {
         private Timer timer;
+
+#if NETFX_CORE
+        private ProcessMemoryUsage CurrentProcess;
+#else
         private Process CurrentProcess;
+#endif
 
         private bool monitorPagedMemory;
         private bool monitorWorkingSet;
@@ -32,7 +41,11 @@ namespace STS.General.Diagnostics
             this.monitorVirtualMemory = monitorVirtualMemory;
             this.monitorPeriodInMilliseconds = monitorPeriodInMilliseconds;
 
+#if NETFX_CORE
+            CurrentProcess = ProcessDiagnosticInfo.GetForCurrentProcess().MemoryUsage;
+#else
             CurrentProcess = Process.GetCurrentProcess();
+#endif
 
             timer = new Timer(DoMonitor, null, Timeout.Infinite, MonitorPeriodInMilliseconds);
         }
@@ -44,6 +57,27 @@ namespace STS.General.Diagnostics
 
         private void DoMonitor(object state)
         {
+#if NETFX_CORE
+            ProcessMemoryUsageReport report = CurrentProcess.GetReport();
+
+            if (monitorPagedMemory)
+            {
+                PagedMemory = (long)report.PageFileSizeInBytes;
+                PeakPagedMemory = (long)report.PeakPageFileSizeInBytes;
+            }
+
+            if (monitorWorkingSet)
+            {
+                WorkingSet = (long)report.WorkingSetSizeInBytes;
+                PeakWorkingSet = (long)report.PeakWorkingSetSizeInBytes;
+            }
+
+            if (monitorVirtualMemory)
+            {
+                VirtualMemory = (long)report.VirtualMemorySizeInBytes;
+                PeakVirtualMemory = (long)report.PeakVirtualMemorySizeInBytes;
+            }
+#else
             CurrentProcess.Refresh();
 
             if (monitorPagedMemory)
@@ -69,6 +103,7 @@ namespace STS.General.Diagnostics
                 if (VirtualMemory > PeakVirtualMemory)
                     PeakVirtualMemory = VirtualMemory;
             }
+#endif
         }
 
         public void Start()

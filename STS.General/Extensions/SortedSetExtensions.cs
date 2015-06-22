@@ -62,14 +62,19 @@ namespace STS.General.Extensions
         public Expression<Func<SortedSet<T>, T, KeyValuePair<bool, T>>> CreateFindMethod()
         {
             Type type = typeof(SortedSet<T>);
-            Type nodeType = type.GetNestedType("Node", BindingFlags.NonPublic).MakeGenericType(typeof(T));
+            Type nodeType = CreateNode(typeof(T));
 
             var set = Expression.Variable(typeof(SortedSet<T>), "set");
             var key = Expression.Variable(typeof(T), "key");
 
             var exitPoint = Expression.Label(typeof(KeyValuePair<bool, T>));
 
-            MethodInfo findNode = type.GetMethod("FindNode", BindingFlags.NonPublic | BindingFlags.Instance);
+            MethodInfo findNode;
+#if NETFX_CORE
+            findNode = type.GetMethod("FindNode");
+#else
+            findNode = type.GetMethod("FindNode", BindingFlags.NonPublic | BindingFlags.Instance);
+#endif
             var call = Expression.Call(set, findNode, key);
             var node = Expression.Variable(nodeType, "node");
             var assign = Expression.Assign(node, call);
@@ -99,7 +104,7 @@ namespace STS.General.Extensions
 
         public Expression<Func<SortedSet<T>, T, KeyValuePair<bool, T>>> CreateMonoFindMethod()
         {
-            Type nodeType = typeof(SortedSet<T>).GetNestedType("Node", BindingFlags.NonPublic).MakeGenericType(typeof(T));
+            Type nodeType = CreateNode(typeof(T));
 
             List<Expression> list = new List<Expression>();
             var exitPoint = Expression.Label(typeof(KeyValuePair<bool, T>));
@@ -140,14 +145,19 @@ namespace STS.General.Extensions
         public Expression<Action<SortedSet<T>, T[], int, int>> CreateConstructFromSortedArrayMethod()
         {
             Type type = typeof(SortedSet<T>);
-            Type nodeType = type.GetNestedType("Node", BindingFlags.NonPublic).MakeGenericType(typeof(T));
+            Type nodeType = CreateNode(typeof(T));
 
             var set = Expression.Variable(typeof(SortedSet<T>), "set");
             var array = Expression.Variable(typeof(T[]), "array");
             var index = Expression.Variable(typeof(int), "index");
             var count = Expression.Variable(typeof(int), "count");
 
-            var method = type.GetMethod("ConstructRootFromSortedArray", BindingFlags.NonPublic | BindingFlags.Static);
+            MethodInfo method;
+#if NETFX_CORE
+            method = type.GetMethod("ConstructRootFromSortedArray");
+#else
+            method = type.GetMethod("ConstructRootFromSortedArray", BindingFlags.NonPublic | BindingFlags.Static);
+#endif
             var toIndex = Expression.Subtract(Expression.Add(index, count), Expression.Constant(1, typeof(int)));
             var call = Expression.Call(method, array, index, toIndex, Expression.Constant(null, nodeType));
 
@@ -185,14 +195,19 @@ namespace STS.General.Extensions
                     Expression.Return(exitPoint, Expression.Constant(null, typeof(object)))
                 ));
 
-            var nodeType = typeof(SortedSet<T>).GetNestedType("Node", BindingFlags.NonPublic).MakeGenericType(typeof(T));
+            var nodeType = CreateNode(typeof(T));
             var node = Expression.Variable(nodeType, "node");
             var nodeCtor = node.Type.GetConstructor(new Type[] { typeof(T) });
 
             var redNode = Expression.Variable(nodeType, "redNode");
             list.Add(Expression.Assign(redNode, Expression.Convert(redNodeParam, nodeType)));
 
-            var fixSizeMethod = typeof(SortedSet<T>).GetNestedType("Node", BindingFlags.NonPublic).GetMethod("FixSize");
+            MethodInfo fixSizeMethod;
+#if NETFX_CORE
+            fixSizeMethod = typeof(SortedSet<T>).GetNestedType("Node").GetMethod("FixSize");
+#else
+            fixSizeMethod = typeof(SortedSet<T>).GetNestedType("Node", BindingFlags.NonPublic).GetMethod("FixSize");
+#endif
 
             list.Add(Expression.IfThen(Expression.Equal(num, Expression.Constant(1, typeof(int))),
                 Expression.Block(
@@ -368,7 +383,7 @@ namespace STS.General.Extensions
         public Expression<Action<SortedSet<T>, T[], int, int>> CreateMonoConstructFromSortedArray()
         {
             Type type = typeof(SortedSet<T>);
-            Type nodeType = typeof(SortedSet<T>).GetNestedType("Node", BindingFlags.NonPublic).MakeGenericType(typeof(T)); ;
+            Type nodeType = CreateNode(typeof(T));
 
             var set = Expression.Parameter(typeof(SortedSet<T>), "set");
             var array = Expression.Parameter(typeof(T[]), "arr");
@@ -414,7 +429,7 @@ namespace STS.General.Extensions
 
             var exitPoint = Expression.Label(typeof(bool));
 
-            Type nodeType = typeof(SortedSet<T>).GetNestedType("Node", BindingFlags.NonPublic).MakeGenericType(typeof(T));
+            Type nodeType = CreateNode(typeof(T));
 
             var rootField = Expression.Field(set, "root");
 
@@ -443,6 +458,25 @@ namespace STS.General.Extensions
             var comparer = Expression.Variable(typeof(IComparer<T>), "comparer");
             list.Add(Expression.Assign(comparer, Expression.Field(set, "comparer")));
 
+            Type sortedSetType = typeof(SortedSet<T>);
+
+            MethodInfo is4NodeMethod;
+            MethodInfo split4NodeMethod;
+            MethodInfo isRedMethod;
+            MethodInfo insertionBalanceMethod;
+
+#if NETFX_CORE
+            is4NodeMethod = sortedSetType.GetMethod("Is4Node");
+            split4NodeMethod = sortedSetType.GetMethod("Split4Node");
+            isRedMethod = sortedSetType.GetMethod("IsRed");
+            insertionBalanceMethod = sortedSetType.GetMethod("InsertionBalance");
+#else
+            is4NodeMethod = sortedSetType.GetMethod("Is4Node", BindingFlags.NonPublic | BindingFlags.Static);
+            split4NodeMethod = sortedSetType.GetMethod("Split4Node", BindingFlags.NonPublic | BindingFlags.Static);
+            isRedMethod = sortedSetType.GetMethod("IsRed", BindingFlags.NonPublic | BindingFlags.Static);
+            insertionBalanceMethod = sortedSetType.GetMethod("InsertionBalance", BindingFlags.NonPublic | BindingFlags.Instance);
+#endif
+
             var loopBody = Expression.Block(
                     Expression.Assign(cmp, Expression.Call(comparer, typeof(IComparer<T>).GetMethod("Compare", new Type[] { typeof(T), typeof(T) }), item, Expression.Field(root, "item"))),
                     Expression.IfThen(Expression.Equal(cmp, Expression.Constant(0)),
@@ -456,11 +490,11 @@ namespace STS.General.Extensions
                                     )
                                 ),
 
-                    Expression.IfThen(Expression.Call(typeof(SortedSet<T>).GetMethod("Is4Node", BindingFlags.NonPublic | BindingFlags.Static), root),
+                    Expression.IfThen(Expression.Call(is4NodeMethod, root),
                                   Expression.Block(
-                                            Expression.Call(typeof(SortedSet<T>).GetMethod("Split4Node", BindingFlags.NonPublic | BindingFlags.Static), root),
-                                            Expression.IfThen(Expression.Call(typeof(SortedSet<T>).GetMethod("IsRed", BindingFlags.NonPublic | BindingFlags.Static), node),
-                                                Expression.Call(set, typeof(SortedSet<T>).GetMethod("InsertionBalance", BindingFlags.NonPublic | BindingFlags.Instance), root, node, grandParent, greatGrandParent)
+                                            Expression.Call(split4NodeMethod, root),
+                                            Expression.IfThen(Expression.Call(isRedMethod, node),
+                                                Expression.Call(set, insertionBalanceMethod, root, node, grandParent, greatGrandParent)
                                         )
                                     )
                                 ),
@@ -491,7 +525,7 @@ namespace STS.General.Extensions
                      );
 
             list.Add(Expression.IfThen(Expression.Field(node, "IsRed"),
-                Expression.Call(set, typeof(SortedSet<T>).GetMethod("InsertionBalance", BindingFlags.NonPublic | BindingFlags.Instance), current, node, grandParent, greatGrandParent)
+                Expression.Call(set, insertionBalanceMethod, current, node, grandParent, greatGrandParent)
                 ));
 
             list.Add(Expression.Assign(Expression.Field(rootField, "IsRed"), Expression.Constant(false)));
@@ -567,7 +601,7 @@ namespace STS.General.Extensions
             var onExist = Expression.Parameter(typeof(Func<T, T, T>));
 
             var exitLabel = Expression.Label(typeof(bool));
-            Type nodeType = typeof(SortedSet<T>).GetNestedType("Node", BindingFlags.NonPublic).MakeGenericType(typeof(T));
+            Type nodeType = CreateNode(typeof(T));
             var node = Expression.Variable(nodeType);
             var nodeExist = Expression.Variable(nodeType);
 
@@ -610,7 +644,13 @@ namespace STS.General.Extensions
         public Expression<Func<SortedSet<T>, T, T, bool, bool, SortedSet<T>>> CreateGetViewBetweenMethod()
         {
             Type type = typeof(SortedSet<T>);
-            Type treeSubSetType = type.GetNestedType("TreeSubSet", BindingFlags.NonPublic).MakeGenericType(typeof(T));
+            Type treeSubSetType;
+
+#if NETFX_CORE
+            treeSubSetType = type.GetNestedType("TreeSubSet").MakeGenericType(typeof(T));
+#else
+            treeSubSetType = type.GetNestedType("TreeSubSet", BindingFlags.NonPublic).MakeGenericType(typeof(T));
+#endif
 
             var set = Expression.Parameter(typeof(SortedSet<T>), "set");
             var lowerValue = Expression.Parameter(typeof(T), "lowerValue");
@@ -650,7 +690,13 @@ namespace STS.General.Extensions
         public Expression<Func<SortedSet<T>, T, T, bool, bool, SortedSet<T>>> CreateMonoGetViewBetweenMethod()
         {
             Type type = typeof(SortedSet<T>);
-            Type sortedSubSetType = type.GetNestedType("SortedSubSet", BindingFlags.NonPublic).MakeGenericType(typeof(T));
+            Type sortedSubSetType;
+
+#if NETFX_CORE
+            sortedSubSetType = type.GetNestedType("SortedSubSet").MakeGenericType(typeof(T));
+#else
+            sortedSubSetType = type.GetNestedType("SortedSubSet", BindingFlags.NonPublic).MakeGenericType(typeof(T));
+#endif
 
             var set = Expression.Parameter(typeof(SortedSet<T>), "set");
             var lowerValue = Expression.Parameter(typeof(T), "lowerValue");
@@ -706,7 +752,7 @@ namespace STS.General.Extensions
             var item = Expression.Parameter(typeof(T), "item");
             var cmp = Expression.Variable(typeof(int), "cmp");
 
-            Type nodeType = typeof(SortedSet<T>).GetNestedType("Node", BindingFlags.NonPublic).MakeGenericType(typeof(T));
+            Type nodeType = CreateNode(typeof(T));
             var next = Expression.Variable(nodeType, "next");
             var node = Expression.Variable(nodeType, "node");
 
@@ -782,7 +828,7 @@ namespace STS.General.Extensions
             var item = Expression.Parameter(typeof(T), "item");
             var cmp = Expression.Variable(typeof(int), "cmp");
 
-            Type nodeType = typeof(SortedSet<T>).GetNestedType("Node", BindingFlags.NonPublic).MakeGenericType(typeof(T));
+            Type nodeType = CreateNode(typeof(T));
             var prev = Expression.Variable(nodeType, "prev");
             var node = Expression.Variable(nodeType, "node");
 
@@ -858,7 +904,7 @@ namespace STS.General.Extensions
             var item = Expression.Parameter(typeof(T), "item");
             var cmp = Expression.Variable(typeof(int), "cmp");
 
-            Type nodeType = typeof(SortedSet<T>).GetNestedType("Node", BindingFlags.NonPublic).MakeGenericType(typeof(T));
+            Type nodeType = CreateNode(typeof(T));
             var after = Expression.Variable(nodeType, "after");
             var node = Expression.Variable(nodeType, "node");
             var tmp = Expression.Variable(nodeType, "tmp");
@@ -952,7 +998,7 @@ namespace STS.General.Extensions
             var item = Expression.Parameter(typeof(T), "item");
             var cmp = Expression.Variable(typeof(int), "cmp");
 
-            Type nodeType = typeof(SortedSet<T>).GetNestedType("Node", BindingFlags.NonPublic).MakeGenericType(typeof(T));
+            Type nodeType = CreateNode(typeof(T));
             var before = Expression.Variable(nodeType, "before");
             var node = Expression.Variable(nodeType, "node");
             var tmp = Expression.Variable(nodeType, "tmp");
@@ -1038,6 +1084,21 @@ namespace STS.General.Extensions
             //}
 
             return Expression.Lambda<Func<SortedSet<T>, T, KeyValuePair<bool, T>>>(Expression.Block(new ParameterExpression[] { cmp, before, node }, list), set, item);
+        }
+
+        private static Type CreateNode(Type genericType)
+        {
+#if NETFX_CORE
+            Type type = typeof(SortedSet<T>);
+            Type nodeType = type.GetNestedType("Node").MakeGenericType(genericType);
+
+            return nodeType;
+#else
+            Type type = typeof(SortedSet<T>);
+            Type nodeType = type.GetNestedType("Node", BindingFlags.NonPublic).MakeGenericType(genericType);
+
+            return nodeType;
+#endif
         }
 
         public bool TryGetValue(SortedSet<T> set, T key, out T value)

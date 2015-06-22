@@ -110,9 +110,7 @@
   <ItemGroup>
     <Compile Include="Buffers\BitUtils.cs" />
     <Compile Include="Buffers\CRC32.cs" />
-    <Compile Include="Buffers\CRC64.cs" />
     <Compile Include="Buffers\HashCodeBuilder.cs" />
-    <Compile Include="Buffers\StructurePrimitives.cs" />
     <Compile Include="Collections\Cache.cs" />
     <Compile Include="Collections\Dependencies.cs" />
     <Compile Include="Collections\DoubleLimitedQueue.cs" />
@@ -153,21 +151,20 @@
     <Compile Include="Data\Persist.cs" />
     <Compile Include="Data\Slots.cs" />
     <Compile Include="Data\SlotsBuilder.cs" />
+    <Compile Include="Data\SortOrder.cs" />
     <Compile Include="Data\Transformer.cs" />
+    <Compile Include="Data\TypeCode.cs" />
     <Compile Include="Data\ValueToObjects.cs" />
     <Compile Include="Data\ValueToString.cs" />
+    <Compile Include="Diagnostics\CPUMonitor.cs" />
     <Compile Include="Diagnostics\IOMonitor.cs" />
     <Compile Include="Diagnostics\MemoryMonitor.cs" />
-    <Compile Include="Diagnostics\CPUMonitor.cs" />
     <Compile Include="Environment.cs" />
     <Compile Include="Extensions\BinaryReaderExtensions.cs" />
     <Compile Include="Extensions\BinaryWriterExtensions.cs" />
     <Compile Include="Extensions\BitArrayExtension.cs" />
     <Compile Include="Extensions\DecimalExtensions.cs" />
     <Compile Include="Extensions\ExpressionExtensions.cs" />
-    <Compile Include="Extensions\IDataReaderExtensions.cs" />
-    <Compile Include="Extensions\IDbCommandExtensions.cs" />
-    <Compile Include="Extensions\IDbConnectionExtensions.cs" />
     <Compile Include="Extensions\KeyValuePairExtensions.cs" />
     <Compile Include="Extensions\ListExtensions.cs" />
     <Compile Include="Extensions\MemberInfoExtensions.cs" />
@@ -179,6 +176,7 @@
     <Compile Include="Generators\CoinTossGenerator.cs" />
     <Compile Include="IO\FastBinaryReader.cs" />
     <Compile Include="IO\FastBinaryWriter.cs" />
+    <Compile Include="IO\IO.cs" />
     <Compile Include="IO\IOUtils.cs" />
     <Compile Include="Extensions\ArrayExtensions.cs" />
     <Compile Include="Extensions\ByteArrayExtensions.cs" />
@@ -188,6 +186,7 @@
     <Compile Include="Compression\CountCompression.cs" />
     <Compile Include="Compression\DeltaCompression.cs" />
     <Compile Include="Extensions\StreamExtensions.cs" />
+    <Compile Include="IO\WindowsUniversalFileStream.cs" />
     <Compile Include="Mathematics\MathUtils.cs" />
     <Compile Include="Extensions\IListExtensions.cs" />
     <Compile Include="Mathematics\NumberDecimalConverter.cs" />
@@ -222,15 +221,16 @@
     <Compile Include="Reflection\MemberReflector.cs" />
     <Compile Include="Reflection\MethodReflector.cs" />
     <Compile Include="Reflection\ObjectDecomposer.cs" />
-    <Compile Include="Reflection\TypeAnalyzer.cs" />
     <Compile Include="Extensions\TypeCodeExtensions.cs" />
-    <Compile Include="SQL\SQLMultiInsert.cs" />
-    <Compile Include="Threading\Countdown.cs" />
     <Compile Include="Threading\LimitedConcurrencyLevelTaskSheduler.cs" />
     <Compile Include="Threading\ReferenceCounter.cs" />
     <Compile Include="TimeUtils\BaseTime.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

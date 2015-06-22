@@ -7,6 +7,14 @@ namespace STS.General.Extensions
 {
     public static class IListExtensions
     {
+        public static T RemoveLast<T>(this IList<T> list)
+        {
+            var item = list[list.Count - 1];
+            list.RemoveAt(list.Count - 1);
+
+            return item;
+        }
+
         public static int BinarySearch<T>(this IList<T> array, int index, int length, T value, IComparer<T> comparer)
         {
             if (comparer == null)
@@ -62,7 +70,11 @@ namespace STS.General.Extensions
 
         public static int BinarySearch(this IList array, int index, int length, object value)
         {
-            return BinarySearch(array, index, length, Comparer.Default);
+#if NETFX_CORE
+            return BinarySearch(array, index, length, value, Comparer<object>.Default);
+#else
+            return BinarySearch(array, index, length, value, Comparer.Default);
+#endif
         }
     }
 }

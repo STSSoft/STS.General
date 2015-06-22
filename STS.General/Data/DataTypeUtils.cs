@@ -48,7 +48,7 @@ namespace STS.General.Data
             if (DataType.IsPrimitiveType(type))
                 return true;
 
-            if (type.IsEnum || type == typeof(Guid))
+            if (type.IsEnum() || type == typeof(Guid))
                 return false;
 
             if (type.IsNullable())
@@ -61,10 +61,10 @@ namespace STS.General.Data
                 return InternalIsAnonymousType(type.GetElementType(), membersOrder);
 
             if (type.IsList())
-                return InternalIsAnonymousType(type.GetGenericArguments()[0], membersOrder);
+                return InternalIsAnonymousType(type.GetGenericArgument(0), membersOrder);
 
             if (type.IsDictionary())
-                return InternalIsAnonymousType(type.GetGenericArguments()[0], membersOrder) && InternalIsAnonymousType(type.GetGenericArguments()[1], membersOrder);
+                return InternalIsAnonymousType(type.GetGenericArgument(0), membersOrder) && InternalIsAnonymousType(type.GetGenericArgument(1), membersOrder);
 
             if (type.IsInheritInterface(typeof(ISlots)))
             {
@@ -75,7 +75,7 @@ namespace STS.General.Data
                 }
             }
 
-            if ((type.IsClass || type.IsStruct()) && !type.IsInheritInterface(typeof(ISlots)))
+            if ((type.IsClass() || type.IsStruct()) && !type.IsInheritInterface(typeof(ISlots)))
                 return false;
 
             return true;
@@ -101,8 +101,8 @@ namespace STS.General.Data
             if (DataType.IsPrimitiveType(type))
                 return DataType.FromPrimitiveType(type);
 
-            if (type.IsEnum)
-                return DataType.FromPrimitiveType(type.GetEnumUnderlyingType());
+            if (type.IsEnum())
+                return DataType.FromPrimitiveType(type.GetEnumBaseType());
 
             if (type == typeof(Guid))
                 return DataType.ByteArray;
@@ -110,25 +110,25 @@ namespace STS.General.Data
             if (type.IsKeyValuePair())
             {
                 return DataType.Slots(
-                    BuildDataType(type.GetGenericArguments()[0], membersOrder, cycleCheck),
-                    BuildDataType(type.GetGenericArguments()[1], membersOrder, cycleCheck));
+                    BuildDataType(type.GetGenericArgument(0), membersOrder, cycleCheck),
+                    BuildDataType(type.GetGenericArgument(1), membersOrder, cycleCheck));
             }
 
             if (type.IsArray)
                 return DataType.Array(BuildDataType(type.GetElementType(), membersOrder, cycleCheck));
 
             if (type.IsList())
-                return DataType.List(BuildDataType(type.GetGenericArguments()[0], membersOrder, cycleCheck));
+                return DataType.List(BuildDataType(type.GetGenericArgument(0), membersOrder, cycleCheck));
 
             if (type.IsDictionary())
             {
                 return DataType.Dictionary(
-                    BuildDataType(type.GetGenericArguments()[0], membersOrder, cycleCheck),
-                    BuildDataType(type.GetGenericArguments()[1], membersOrder, cycleCheck));
+                    BuildDataType(type.GetGenericArgument(0), membersOrder, cycleCheck),
+                    BuildDataType(type.GetGenericArgument(1), membersOrder, cycleCheck));
             }
 
             if (type.IsNullable())
-                return DataType.Slots(BuildDataType(type.GetGenericArguments()[0], membersOrder, cycleCheck));
+                return DataType.Slots(BuildDataType(type.GetGenericArgument(0), membersOrder, cycleCheck));
 
             List<DataType> slots = new List<DataType>();
             foreach (var member in GetPublicMembers(type, membersOrder))
@@ -152,7 +152,7 @@ namespace STS.General.Data
 
         public static DataType BuildDataType(Type type, Func<Type, MemberInfo, int> membersOrder = null)
         {
-            if (DataType.IsPrimitiveType(type) || type.IsEnum || type == typeof(Guid) || type.IsKeyValuePair() || type.IsArray || type.IsList() || type.IsDictionary() || type.IsNullable())
+            if (DataType.IsPrimitiveType(type) || type.IsEnum() || type == typeof(Guid) || type.IsKeyValuePair() || type.IsArray || type.IsList() || type.IsDictionary() || type.IsNullable())
                 return BuildDataType(type, membersOrder, new HashSet<Type>());
 
             List<DataType> slots = new List<DataType>();
@@ -176,8 +176,10 @@ namespace STS.General.Data
             if (dataType.IsDictionary)
                 return typeof(Dictionary<,>).MakeGenericType(InternalBuildType(dataType[0]), InternalBuildType(dataType[1]));
 
+#if !NETFX_CORE
             if (dataType.IsSlots)
                 return SlotsBuilder.BuildType(dataType.Select(x => InternalBuildType(x)).ToArray());
+#endif
 
             throw new NotSupportedException();
         }

@@ -6,6 +6,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+#if NETFX_CORE
+using Windows.System.Diagnostics;
+#endif
+
 namespace STS.General.Diagnostics
 {
     /// <summary>
@@ -15,15 +19,19 @@ namespace STS.General.Diagnostics
     {
         private Timer timer;
 
+#if NETFX_CORE
+        private ProcessDiskUsage CurrentProcess;
+#else
         private PerformanceCounter writesCounter;
         private PerformanceCounter readsCounter;
         private PerformanceCounter dataCounter;
+#endif
 
         private bool monitorIOWrites;
         private bool monitorIOReads;
         private bool monitorIOData;
 
-        private long monitorPerionInMilliseconds;
+        private int monitorPerionInMilliseconds;
 
         public IOMonitor(bool monitorIOWrites, bool monitorIOReads, bool monitorIOData, int monitorPeriodInMilliseconds)
         {
@@ -36,25 +44,56 @@ namespace STS.General.Diagnostics
 
             this.monitorPerionInMilliseconds = monitorPeriodInMilliseconds;
 
+#if NETFX_CORE
+            CurrentProcess = ProcessDiagnosticInfo.GetForCurrentProcess().DiskUsage;
+#else
             string processName = Process.GetCurrentProcess().ProcessName;
 
-            if(monitorIOWrites)
+            if (monitorIOWrites)
                 writesCounter = new PerformanceCounter("Process", "IO Write Bytes/sec", processName);
-            if(monitorIOReads)
+            if (monitorIOReads)
                 readsCounter = new PerformanceCounter("Process", "IO Read Bytes/sec", processName);
-            if(monitorIOData)
+            if (monitorIOData)
                 dataCounter = new PerformanceCounter("Process", "IO Data Bytes/sec", processName);
+#endif
 
             timer = new Timer(DoMonitor, null, Timeout.Infinite, MonitorPeriodInMilliseconds);
         }
 
         public IOMonitor(int monitorPeriodInMilliseconds = 1000)
-            :this(true, true, true, monitorPeriodInMilliseconds)
+            : this(true, true, true, monitorPeriodInMilliseconds)
         {
         }
 
         private void DoMonitor(object state)
         {
+#if NETFX_CORE
+            ProcessDiskUsageReport report = CurrentProcess.GetReport();
+
+            if (monitorIOWrites)
+            {
+                IOWriteBytes = report.BytesWrittenCount;
+
+                if (IOWriteBytes > PeakIOWriteBytes)
+                    PeakIOWriteBytes = IOWriteBytes;
+            }
+
+            if (monitorIOReads)
+            {
+                IOReadBytes = report.BytesReadCount;
+
+                if (IOReadBytes > PeakIOReadBytes)
+                    PeakIOReadBytes = IOReadBytes;
+            }
+
+            if (monitorIOData)
+            {
+                IODataBytes = report.OtherBytesCount;
+
+                if (IODataBytes > PeakIODataBytes)
+                    PeakIODataBytes = IODataBytes;
+            }
+#else
             if (monitorIOWrites)
             {
                 IOWriteBytes = writesCounter.NextValue();
@@ -78,6 +117,7 @@ namespace STS.General.Diagnostics
                 if (IODataBytes > PeakIODataBytes)
                     PeakIODataBytes = IODataBytes;
             }
+#endif
         }
 
         public void Start()
@@ -104,7 +144,7 @@ namespace STS.General.Diagnostics
         /// <summary>
         /// Gets or sets the interval between every measure.
         /// </summary>
-        public long MonitorPeriodInMilliseconds
+        public int MonitorPeriodInMilliseconds
         {
             get { return monitorPerionInMilliseconds; }
             set

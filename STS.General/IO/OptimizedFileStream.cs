@@ -5,6 +5,7 @@ using System.IO;
 
 namespace STS.General.IO
 {
+#if !NETFX_CORE
     /// <summary>
     /// An optimized FileStram - optimizes calls to Seek & Size methods
     /// The requirement is if the file is opened for writing, it is an exclusive.
@@ -154,4 +155,5 @@ namespace STS.General.IO
             return position;
         }
     }
+#endif
 }

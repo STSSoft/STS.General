@@ -55,7 +55,15 @@ namespace STS.General.Reflection
             var value = Expression.Variable(Type);
 
             var stringList = Expression.Variable(typeof(List<string>));
-            list.Add(Expression.Assign(stringList, Expression.New(typeof(List<string>).GetConstructor(Type.EmptyTypes))));
+
+            ConstructorInfo listConstructor;
+
+#if NETFX_CORE
+            listConstructor = typeof(List<string>).GetConstructor();
+#else
+            listConstructor = typeof(List<string>).GetConstructor(Type.EmptyTypes);
+#endif
+            list.Add(Expression.Assign(stringList, Expression.New(listConstructor)));
 
             list.Add(Expression.Assign(value, Expression.Convert(item, Type)));
             list.Add(CreateStrBodyFor(value, stringList, null));
@@ -75,7 +83,16 @@ namespace STS.General.Reflection
             var value = Expression.Variable(Type);
 
             var objList = Expression.Variable(typeof(List<object>));
-            list.Add(Expression.Assign(objList, Expression.New(typeof(List<object>).GetConstructor(Type.EmptyTypes))));
+
+            ConstructorInfo listConstructor;
+
+#if NETFX_CORE
+            listConstructor = typeof(List<object>).GetConstructor();
+#else
+            listConstructor = typeof(List<object>).GetConstructor(Type.EmptyTypes);
+#endif
+
+            list.Add(Expression.Assign(objList, Expression.New(listConstructor)));
 
             list.Add(Expression.Assign(value, Expression.Convert(item, Type)));
             list.Add(CreateObjBodyFor(value, objList, null));
@@ -97,7 +114,7 @@ namespace STS.General.Reflection
 
             var addMethod = typeof(List<object>).GetMethod("Add", new Type[] { typeof(object) });
 
-            if (type == typeof(object) || type.IsEnum || type.IsPrimitive || type == typeof(string))
+            if (type == typeof(object) || type.IsEnum() || type.IsPrimitive() || type == typeof(string))
                 list.Add(Expression.Call(objList, addMethod, Expression.Convert(value, typeof(object))));
             else
             {
@@ -106,8 +123,17 @@ namespace STS.General.Reflection
                     string memberName = parentName == null ? member.Name : string.Join(".", parentName, member.Name);
 
                     var memberType = member.GetUnderlyingType();
-                    var attributes = memberType.GetCustomAttributes();
-                    bool goesIn = attributes.Where(x => x.GetType() == typeof(BrowsableAttribute)).Count() > 0;
+                    IEnumerable<Attribute> attributes;
+                    Type searchAttributeType;
+
+#if NETFX_CORE
+                    attributes = memberType.GetTypeInfo().GetCustomAttributes();
+                    searchAttributeType = typeof(EditorBrowsableAttribute);
+#else
+                    attributes = memberType.GetCustomAttributes();
+                    searchAttributeType = typeof(BrowsableAttribute);
+#endif
+                    bool goesIn = attributes.Where(x => x.GetType() == searchAttributeType).Count() > 0;
 
                     if (ExcludedMembers.Contains(memberName))
                         continue;
@@ -135,7 +161,7 @@ namespace STS.General.Reflection
 
             var addMethod = typeof(List<string>).GetMethod("Add", new Type[] { typeof(string) });
 
-            if (type == typeof(object) || type.IsEnum || type.IsPrimitive || type == typeof(string))
+            if (type == typeof(object) || type.IsEnum() || type.IsPrimitive() || type == typeof(string))
             {
                 CurrentMemberNames.Add(type.Name);
                 CurrentMembersType.Add(type);
@@ -149,8 +175,17 @@ namespace STS.General.Reflection
                     string memberName = parentName == null ? member.Name : string.Join(".", parentName, member.Name);
 
                     var memberType = member.GetUnderlyingType();
-                    var attributes = memberType.GetCustomAttributes();
-                    bool hasRecursiveAttr = attributes.Where(x => x.GetType() == typeof(BrowsableAttribute)).Count() > 0;
+                    IEnumerable<Attribute> attributes;
+                    Type searchAttributeType;
+
+#if NETFX_CORE
+                    attributes = memberType.GetTypeInfo().GetCustomAttributes();
+                    searchAttributeType = typeof(EditorBrowsableAttribute);
+#else
+                    attributes = memberType.GetCustomAttributes();
+                    searchAttributeType = typeof(BrowsableAttribute);
+#endif
+                    bool hasRecursiveAttr = attributes.Where(x => x.GetType() == searchAttributeType).Count() > 0;
 
                     if (!hasRecursiveAttr)
                         AllMemberNames.Add(memberName);
@@ -167,7 +202,8 @@ namespace STS.General.Reflection
                     {
                         CurrentMembersType.Add(memberType);
                         CurrentMemberNames.Add(memberName);
-                        if (!memberType.IsClass)
+
+                        if (!memberType.IsClass())
                             list.Add(Expression.Call(stringList, addMethod, CallToString(Expression.PropertyOrField(value, member.Name))));
                         else
                         {
@@ -189,7 +225,7 @@ namespace STS.General.Reflection
         {
             var toStringMethod = member.Type.GetMethod("ToString", new Type[] { });
 
-            if (member.Type.IsClass)
+            if (member.Type.IsClass())
             {
                 return Expression.Block(
                     Expression.Condition(Expression.NotEqual(member, Expression.Constant(null)),
@@ -203,6 +239,28 @@ namespace STS.General.Reflection
 
         private IEnumerable<MemberInfo> GetMembers(Type type, HashSet<string> excludedMembers = null)
         {
+#if NETFX_CORE
+            foreach (var member in type.GetMembers())
+            {
+                if (excludedMembers != null && excludedMembers.Contains(member.Name))
+                    continue;
+
+                //Members
+                if (member is FieldInfo)
+                    yield return (FieldInfo)member;
+
+                //Properties
+                if (member is PropertyInfo)
+                {
+                    PropertyInfo property = (PropertyInfo)member;
+                    if (property.GetIndexParameters().Length > 0)
+                        continue;
+
+                    if (property.GetMethod != null)
+                        yield return member;
+                }
+            }
+#else
             foreach (var member in type.GetMembers(BindingFlags.Public | BindingFlags.Instance))
             {
                 if (excludedMembers != null && excludedMembers.Contains(member.Name))
@@ -223,6 +281,7 @@ namespace STS.General.Reflection
                         yield return member;
                 }
             }
+#endif
         }
     }
 }

@@ -275,12 +275,15 @@ namespace STS.General.Data
             else if (type == typeof(DateTime) || type == typeof(TimeSpan))
             {
                 DateTimeFormatInfo dateTimeFormat = new DateTimeFormatInfo();
-                dateTimeFormat.DateSeparator = "-";
-                dateTimeFormat.TimeSeparator = ":";
                 dateTimeFormat.ShortDatePattern = "yyyy-MM-dd";
                 dateTimeFormat.ShortTimePattern = "HH:mm:ss.fff";
                 dateTimeFormat.LongDatePattern = dateTimeFormat.ShortDatePattern;
                 dateTimeFormat.LongTimePattern = dateTimeFormat.ShortTimePattern;
+
+#if !NETFX_CORE
+                dateTimeFormat.DateSeparator = "-";
+                dateTimeFormat.TimeSeparator = ":";
+#endif
 
                 return dateTimeFormat;
             }

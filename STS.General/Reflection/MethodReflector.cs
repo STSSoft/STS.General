@@ -5,6 +5,7 @@ using System.Text;
 using System.Reflection;
 using System.Linq.Expressions;
 using System.Reflection.Emit;
+using STS.General.Extensions;
 
 namespace STS.General.Reflection
 {
@@ -20,7 +21,13 @@ namespace STS.General.Reflection
             List<ParameterExpression> args = new List<ParameterExpression>(arguments.Length);
             List<Expression> cast_args = new List<Expression>(arguments.Length);
 
-            MethodInfo methodInfo = ownerType.GetMethod(methodName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance, null, arguments, null);
+            MethodInfo methodInfo;
+
+#if NETFX_CORE
+            methodInfo = ownerType.GetMethod(methodName);
+#else
+            methodInfo = ownerType.GetMethod(methodName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance, null, arguments, null);
+#endif
             var instance = Expression.Parameter(typeof(object), "instance");
             var cast_instance = Expression.Convert(instance, ownerType);
             args.Add(instance);

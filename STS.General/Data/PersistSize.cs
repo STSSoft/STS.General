@@ -59,51 +59,27 @@ namespace STS.General.Data
     {
         public static Expression CreateSizeBody(Expression item, int charSize, Func<Type, MemberInfo, int> membersOrder, AllowNull allowNull)
         {
-            if (DataType.IsPrimitiveType(item.Type) || item.Type.IsEnum || item.Type == typeof(Guid) || item.Type.IsKeyValuePair() ||
-                item.Type.IsArray || item.Type.IsList() || item.Type.IsDictionary() || item.Type.IsNullable())
-            {
-                return Expression.Block(
-                            Expression.Label(Expression.Label(typeof(int)), BuildGetSize(item, charSize, membersOrder, allowNull, true))
-                        );
-            }
-
-            var members = DataTypeUtils.GetPublicMembers(item.Type, membersOrder).ToList();
-
-            Expression megaAdd = BuildGetSize(Expression.PropertyOrField(item, members[0].Name), charSize, membersOrder, allowNull, false);
-            for (int i = 1; i < members.Count; i++)
-            {
-                var getSize = BuildGetSize(Expression.PropertyOrField(item, members[i].Name), charSize, membersOrder, allowNull, false);
-                megaAdd = Expression.Add(megaAdd, getSize);
-            }
-
-            if (allowNull == AllowNull.All && !item.Type.IsStruct())
-            {
-                return Expression.Condition(Expression.NotEqual(item, Expression.Constant(null, item.Type)),
-                    Expression.Add(Expression.Constant(1), megaAdd),
-                    Expression.Constant(1));
-            }
-
-            return megaAdd;
+            return BuildGetSize(item, charSize, membersOrder, allowNull, 0);
         }
 
-        private static Expression BuildGetSize(Expression item, int charSize, Func<Type, MemberInfo, int> membersOrder, AllowNull allowNull, bool isTop)
+        private static Expression BuildGetSize(Expression item, int charSize, Func<Type, MemberInfo, int> membersOrder, AllowNull allowNull, int depth)
         {
             var type = item.Type;
-            bool canBeNull = allowNull == AllowNull.All || (allowNull == AllowNull.OnlyMembers && !isTop);
+            bool canBeNull = CanBeNull(type, allowNull, depth);
 
             if (type == typeof(Guid))
                 return GetPrimitiveValueSize(Expression.Call(item, type.GetMethod("ToByteArray")), charSize, false);
 
-            if (type.IsEnum)
-                return GetPrimitiveValueSize(Expression.Convert(item, item.Type.GetEnumUnderlyingType()), charSize, canBeNull);
+            if (type.IsEnum())
+                return GetPrimitiveValueSize(Expression.Convert(item, item.Type.GetEnumBaseType()), charSize, canBeNull);
 
             if (DataType.IsPrimitiveType(type))
                 return GetPrimitiveValueSize(item, charSize, canBeNull);
 
             if (type.IsKeyValuePair())
             {
-                var key = BuildGetSize(Expression.PropertyOrField(item, "Key"), charSize, membersOrder, allowNull, false);
-                var value = BuildGetSize(Expression.PropertyOrField(item, "Value"), charSize, membersOrder, allowNull, false);
+                var key = BuildGetSize(Expression.PropertyOrField(item, "Key"), charSize, membersOrder, allowNull, depth + 1);
+                var value = BuildGetSize(Expression.PropertyOrField(item, "Value"), charSize, membersOrder, allowNull, depth + 1);
 
                 return Expression.Add(key, value);
             }
@@ -115,7 +91,7 @@ namespace STS.General.Data
                 var writeCount = Expression.Call(typeof(CountCompression).GetMethod("GetSize"), Expression.Convert(count, typeof(ulong)));
 
                 int fixedSize = 0;
-                var itemType = type.IsArray ? type.GetElementType() : type.GetGenericArguments()[0];
+                var itemType = type.IsArray ? type.GetElementType() : type.GetGenericArgument(0);
                 if (HasFixedSize(itemType, out fixedSize))
                 {
                     if (!canBeNull)
@@ -134,7 +110,7 @@ namespace STS.General.Data
                     return Expression.Block(new ParameterExpression[] { listSum },
                             Expression.Assign(listSum, writeCount),
                             item.For(i =>
-                                Expression.AddAssign(listSum, BuildGetSizeWithAssignedOrCurrentVariable(type.IsArray ? Expression.ArrayAccess(item, i) : item.This(i), charSize, membersOrder, allowNull, false)),
+                                Expression.AddAssign(listSum, BuildGetSizeWithAssignedOrCurrentVariable(type.IsArray ? Expression.ArrayAccess(item, i) : item.This(i), charSize, membersOrder, allowNull, depth + 1)),
                                 Expression.Label()),
 
                                 Expression.Label(Expression.Label(typeof(int)), listSum)
@@ -146,7 +122,7 @@ namespace STS.General.Data
                                         Expression.Assign(listSum, Expression.Constant(1)),
                                         Expression.AddAssign(listSum, writeCount),
                                         item.For(i =>
-                                            Expression.AddAssign(listSum, BuildGetSizeWithAssignedOrCurrentVariable(type.IsArray ? Expression.ArrayAccess(item, i) : item.This(i), charSize, membersOrder, allowNull, false)),
+                                            Expression.AddAssign(listSum, BuildGetSizeWithAssignedOrCurrentVariable(type.IsArray ? Expression.ArrayAccess(item, i) : item.This(i), charSize, membersOrder, allowNull, depth + 1)),
                                             Expression.Label()),
 
                                             Expression.Label(Expression.Label(typeof(int)), listSum)
@@ -157,11 +133,16 @@ namespace STS.General.Data
 
             if (type.IsDictionary())
             {
-                var keyType = type.GetGenericArguments()[0];
-                var valueType = type.GetGenericArguments()[1];
+                var keyType = type.GetGenericArgument(0);
 
-                if (!DataType.IsPrimitiveType(keyType) && !type.GetGenericArguments()[0].IsEnum && type != typeof(Guid))
-                    throw new NotSupportedException(String.Format("Dictionarty<{0}, TValue>", type.GetGenericArguments()[0].ToString()));
+                if (!IsSupportDictionaryKeyType(keyType))
+                    throw new NotSupportedException(String.Format("Dictionarty<{0}, TValue>", keyType.ToString()));
+
+                var valueType = type.GetGenericArgument(1);
+                bool isEnum = type.GetGenericArgument(0).IsEnum();
+
+                if (!DataType.IsPrimitiveType(keyType) && !isEnum && type != typeof(Guid))
+                    throw new NotSupportedException(String.Format("Dictionarty<{0}, TValue>", type.GetGenericArgument(0).ToString()));
 
                 var dictSum = Expression.Variable(typeof(int));
 
@@ -195,8 +176,8 @@ namespace STS.General.Data
                                 return Expression.Block(new ParameterExpression[] { kv },
                                     Expression.Assign(kv, current),
 
-                                    Expression.AddAssign(dictSum, BuildGetSizeWithAssignedOrCurrentVariable(Expression.PropertyOrField(kv, "Key"), charSize, membersOrder, allowNull, false)),
-                                    Expression.AddAssign(dictSum, BuildGetSizeWithAssignedOrCurrentVariable(Expression.PropertyOrField(kv, "Value"), charSize, membersOrder, allowNull, false))
+                                    Expression.AddAssign(dictSum, BuildGetSizeWithAssignedOrCurrentVariable(Expression.PropertyOrField(kv, "Key"), charSize, membersOrder, allowNull, depth + 1)),
+                                    Expression.AddAssign(dictSum, BuildGetSizeWithAssignedOrCurrentVariable(Expression.PropertyOrField(kv, "Value"), charSize, membersOrder, allowNull, depth + 1))
                                 );
                             }, Expression.Label()),
 
@@ -215,8 +196,8 @@ namespace STS.General.Data
                                     return Expression.Block(new ParameterExpression[] { kv },
                                         Expression.Assign(kv, current),
 
-                                        Expression.AddAssign(dictSum, BuildGetSizeWithAssignedOrCurrentVariable(Expression.PropertyOrField(kv, "Key"), charSize, membersOrder, allowNull, false)),
-                                        Expression.AddAssign(dictSum, BuildGetSizeWithAssignedOrCurrentVariable(Expression.PropertyOrField(kv, "Value"), charSize, membersOrder, allowNull, false))
+                                        Expression.AddAssign(dictSum, BuildGetSizeWithAssignedOrCurrentVariable(Expression.PropertyOrField(kv, "Key"), charSize, membersOrder, allowNull, depth + 1)),
+                                        Expression.AddAssign(dictSum, BuildGetSizeWithAssignedOrCurrentVariable(Expression.PropertyOrField(kv, "Value"), charSize, membersOrder, allowNull, depth + 1))
                                     );
                                 }, Expression.Label()),
 
@@ -229,7 +210,7 @@ namespace STS.General.Data
 
             if (type.IsNullable())
             {
-                var getSize = BuildGetSize(Expression.PropertyOrField(item, "Value"), charSize, membersOrder, allowNull, false);
+                var getSize = BuildGetSize(Expression.PropertyOrField(item, "Value"), charSize, membersOrder, allowNull, depth + 1);
 
                 if (!canBeNull)
                     return getSize;
@@ -240,7 +221,7 @@ namespace STS.General.Data
                     );
             }
 
-            if (type.IsClass || type.IsStruct())
+            if (type.IsClass() || type.IsStruct())
             {
                 List<ParameterExpression> variables = new List<ParameterExpression>();
                 List<Expression> list = new List<Expression>();
@@ -256,7 +237,7 @@ namespace STS.General.Data
                     int mSize = 0;
                     if (HasFixedSize(mType, out mSize))
                     {
-                        var getSize = BuildGetSize(Expression.PropertyOrField(item, members[i].Name), charSize, membersOrder, allowNull, false);
+                        var getSize = BuildGetSize(Expression.PropertyOrField(item, members[i].Name), charSize, membersOrder, allowNull, depth + 1);
                         megaAdd = (i == 0) ? getSize : Expression.Add(megaAdd, getSize);
                     }
                     else
@@ -265,7 +246,7 @@ namespace STS.General.Data
                         variables.Add(var);
                         list.Add(Expression.Assign(var, Expression.PropertyOrField(item, members[i].Name)));
 
-                        var getSize = BuildGetSize(var, charSize, membersOrder, allowNull, false);
+                        var getSize = BuildGetSize(var, charSize, membersOrder, allowNull, depth + 1);
                         megaAdd = (i == 0) ? getSize : Expression.Add(megaAdd, getSize);
                     }
                 }
@@ -301,18 +282,18 @@ namespace STS.General.Data
             throw new NotSupportedException(item.Type.ToString());
         }
 
-        private static Expression BuildGetSizeWithAssignedOrCurrentVariable(Expression variable, int charSize, Func<Type, MemberInfo, int> membersOrder, AllowNull allowNull, bool isTop)
+        private static Expression BuildGetSizeWithAssignedOrCurrentVariable(Expression variable, int charSize, Func<Type, MemberInfo, int> membersOrder, AllowNull allowNull, int depth)
         {
             var type = variable.Type;
 
-            if (DataType.IsPrimitiveType(type) && type.IsEnum && type != typeof(Guid))
-                return BuildGetSize(variable, charSize, membersOrder, allowNull, isTop);
+            if (DataType.IsPrimitiveType(type) && type.IsEnum() && type != typeof(Guid))
+                return BuildGetSize(variable, charSize, membersOrder, allowNull, depth + 1);
 
             ParameterExpression @var = Expression.Variable(type);
             return Expression.Block(new ParameterExpression[] { @var },
                     Expression.Assign(@var, variable),
 
-                    Expression.Label(Expression.Label(typeof(int)), BuildGetSize(@var, charSize, membersOrder, allowNull, isTop))
+                    Expression.Label(Expression.Label(typeof(int)), BuildGetSize(@var, charSize, membersOrder, allowNull, depth + 1))
                 );
         }
 
@@ -321,7 +302,14 @@ namespace STS.General.Data
             Debug.Assert(DataType.IsPrimitiveType(item.Type));
 
             Type type = item.Type;
-            switch (Type.GetTypeCode(type))
+            int typeCode;
+
+#if NETFX_CORE
+            typeCode = DataType.GetTypeCode(type);
+#else
+            typeCode = (int)Type.GetTypeCode(type);
+#endif
+            switch (typeCode)
             {
                 case TypeCode.Boolean:
                 case TypeCode.Char:
@@ -402,7 +390,14 @@ namespace STS.General.Data
         /// </summary>
         private static bool HasFixedSize(Type type, out int size)
         {
-            switch (Type.GetTypeCode(type))
+            int typeCode;
+
+#if NETFX_CORE
+            typeCode = DataType.GetTypeCode(type);
+#else
+            typeCode = (int)Type.GetTypeCode(type);
+#endif
+            switch (typeCode)
             {
                 case TypeCode.Boolean:
                 case TypeCode.Char:
@@ -454,6 +449,37 @@ namespace STS.General.Data
             }
 
             size = -1;
+
+            return false;
+        }
+
+        private static bool CanBeNull(Type type, AllowNull allowNull, int depth)
+        {
+            //if (type == typeof(Guid))
+            //    return false;
+
+            if (type.IsEnum())
+                return false;
+
+            if (type.IsStruct() && !type.IsNullable())
+                return false;
+
+            if (allowNull == AllowNull.OnlyMembers)
+                return depth > 0;
+
+            return allowNull == AllowNull.All;
+        }
+
+        private static bool IsSupportDictionaryKeyType(Type type)
+        {
+            if (type == typeof(Guid))
+                return true;
+
+            if (type.IsEnum())
+                return true;
+
+            if (DataType.IsPrimitiveType(type))
+                return true;
 
             return false;
         }

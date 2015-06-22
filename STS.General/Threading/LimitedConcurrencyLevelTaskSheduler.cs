@@ -5,6 +5,11 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+#if NETFX_CORE
+using Windows.Foundation;
+using Windows.System.Threading;
+#endif
+
 namespace STS.General.Threading
 {
     //http://msdn.microsoft.com/en-us/library/system.threading.tasks.taskscheduler.maximumconcurrencylevel%28v=vs.110%29.aspx
@@ -66,6 +71,42 @@ namespace STS.General.Threading
         // Inform the ThreadPool that there's work to be executed for this scheduler.  
         private void NotifyThreadPoolOfPendingWork()
         {
+#if NETFX_CORE
+            ThreadPool.RunAsync(new WorkItemHandler(_ =>
+            {
+                currentThreadIsProcessingItems = true;
+                try
+                {
+                    // Process all available items in the queue. 
+                    while (true)
+                    {
+                        Task item;
+                        lock (tasks)
+                        {
+                            // When there are no more items to be processed, 
+                            // note that we're done processing, and get out. 
+                            if (tasks.Count == 0)
+                            {
+                                --delegatesQueuedOrRunning;
+                                break;
+                            }
+
+                            // Get the next item from the queue
+                            item = tasks.First.Value;
+                            TryDequeue(item); //tasks.RemoveFirst();
+                        }
+
+                        // Execute the task we pulled out of the queue 
+                        base.TryExecuteTask(item);
+                    }
+                }
+                // We're done processing items on the current thread 
+                finally
+                {
+                    currentThreadIsProcessingItems = false;
+                }
+            }));
+#else
             ThreadPool.UnsafeQueueUserWorkItem(_ =>
             {
                 // Note that the current thread is now processing work items. 
@@ -102,6 +143,7 @@ namespace STS.General.Threading
                     currentThreadIsProcessingItems = false;
                 }
             }, null);
+#endif
         }
 
         // Attempts to execute the specified task on the current thread.  

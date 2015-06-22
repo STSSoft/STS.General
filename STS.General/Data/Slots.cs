@@ -9,7 +9,10 @@ namespace STS.General.Data
     {
     }
 
+    
+#if !NETFX_CORE
     [Serializable]
+#endif
     public class Slots<TSlot0> : ISlots
     {
         public TSlot0 Slot0;
@@ -23,8 +26,10 @@ namespace STS.General.Data
             Slot0 = slot0;
         }
     }
-
+    
+#if !NETFX_CORE
     [Serializable]
+#endif
     public class Slots<TSlot0, TSlot1> : ISlots
     {
         public TSlot0 Slot0;
@@ -40,8 +45,10 @@ namespace STS.General.Data
             Slot1 = slot1;
         }
     }
-
+    
+#if !NETFX_CORE
     [Serializable]
+#endif
     public class Slots<TSlot0, TSlot1, TSlot2> : ISlots
     {
         public TSlot0 Slot0;
@@ -59,8 +66,10 @@ namespace STS.General.Data
             Slot2 = slot2;
         }
     }
-
+    
+#if !NETFX_CORE
     [Serializable]
+#endif
     public class Slots<TSlot0, TSlot1, TSlot2, TSlot3> : ISlots
     {
         public TSlot0 Slot0;
@@ -80,8 +89,10 @@ namespace STS.General.Data
             Slot3 = slot3;
         }
     }
-
+    
+#if !NETFX_CORE
     [Serializable]
+#endif
     public class Slots<TSlot0, TSlot1, TSlot2, TSlot3, TSlot4> : ISlots
     {
         public TSlot0 Slot0;
@@ -103,8 +114,10 @@ namespace STS.General.Data
             Slot4 = slot4;
         }
     }
-
+    
+#if !NETFX_CORE
     [Serializable]
+#endif
     public class Slots<TSlot0, TSlot1, TSlot2, TSlot3, TSlot4, TSlot5> : ISlots
     {
         public TSlot0 Slot0;
@@ -128,8 +141,10 @@ namespace STS.General.Data
             Slot5 = slot5;
         }
     }
-
+    
+#if !NETFX_CORE
     [Serializable]
+#endif
     public class Slots<TSlot0, TSlot1, TSlot2, TSlot3, TSlot4, TSlot5, TSlot6> : ISlots
     {
         public TSlot0 Slot0;
@@ -155,8 +170,10 @@ namespace STS.General.Data
             Slot6 = slot6;
         }
     }
-
+    
+#if !NETFX_CORE
     [Serializable]
+#endif
     public class Slots<TSlot0, TSlot1, TSlot2, TSlot3, TSlot4, TSlot5, TSlot6, TSlot7> : ISlots
     {
         public TSlot0 Slot0;
@@ -184,8 +201,10 @@ namespace STS.General.Data
             Slot7 = slot7;
         }
     }
-
+    
+#if !NETFX_CORE
     [Serializable]
+#endif
     public class Slots<TSlot0, TSlot1, TSlot2, TSlot3, TSlot4, TSlot5, TSlot6, TSlot7, TSlot8> : ISlots
     {
         public TSlot0 Slot0;
@@ -215,8 +234,10 @@ namespace STS.General.Data
             Slot8 = slot8;
         }
     }
-
+    
+#if !NETFX_CORE
     [Serializable]
+#endif
     public class Slots<TSlot0, TSlot1, TSlot2, TSlot3, TSlot4, TSlot5, TSlot6, TSlot7, TSlot8, TSlot9> : ISlots
     {
         public TSlot0 Slot0;
@@ -248,8 +269,10 @@ namespace STS.General.Data
             Slot9 = slot9;
         }
     }
-
+    
+#if !NETFX_CORE
     [Serializable]
+#endif
     public class Slots<TSlot0, TSlot1, TSlot2, TSlot3, TSlot4, TSlot5, TSlot6, TSlot7, TSlot8, TSlot9, TSlot10> : ISlots
     {
         public TSlot0 Slot0;
@@ -283,8 +306,10 @@ namespace STS.General.Data
             Slot10 = slot10;
         }
     }
-
+    
+#if !NETFX_CORE
     [Serializable]
+#endif
     public class Slots<TSlot0, TSlot1, TSlot2, TSlot3, TSlot4, TSlot5, TSlot6, TSlot7, TSlot8, TSlot9, TSlot10, TSlot11> : ISlots
     {
         public TSlot0 Slot0;
@@ -320,8 +345,10 @@ namespace STS.General.Data
             Slot11 = slot11;
         }
     }
-
+    
+#if !NETFX_CORE
     [Serializable]
+#endif
     public class Slots<TSlot0, TSlot1, TSlot2, TSlot3, TSlot4, TSlot5, TSlot6, TSlot7, TSlot8, TSlot9, TSlot10, TSlot11, TSlot12> : ISlots
     {
         public TSlot0 Slot0;
@@ -359,8 +386,10 @@ namespace STS.General.Data
             Slot12 = slot12;
         }
     }
-
+    
+#if !NETFX_CORE
     [Serializable]
+#endif
     public class Slots<TSlot0, TSlot1, TSlot2, TSlot3, TSlot4, TSlot5, TSlot6, TSlot7, TSlot8, TSlot9, TSlot10, TSlot11, TSlot12, TSlot13> : ISlots
     {
         public TSlot0 Slot0;
@@ -400,8 +429,10 @@ namespace STS.General.Data
             Slot13 = slot13;
         }
     }
-
+    
+#if !NETFX_CORE
     [Serializable]
+#endif
     public class Slots<TSlot0, TSlot1, TSlot2, TSlot3, TSlot4, TSlot5, TSlot6, TSlot7, TSlot8, TSlot9, TSlot10, TSlot11, TSlot12, TSlot13, TSlot14> : ISlots
     {
         public TSlot0 Slot0;
@@ -443,8 +474,10 @@ namespace STS.General.Data
             Slot14 = slot14;
         }
     }
-
+    
+#if !NETFX_CORE
     [Serializable]
+#endif
     public class Slots<TSlot0, TSlot1, TSlot2, TSlot3, TSlot4, TSlot5, TSlot6, TSlot7, TSlot8, TSlot9, TSlot10, TSlot11, TSlot12, TSlot13, TSlot14, TSlot15> : ISlots
     {
         public TSlot0 Slot0;

@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace STS.General.Extensions
 {
@@ -74,7 +76,7 @@ namespace STS.General.Extensions
 
             int index = 0;
             int count = array.Length;
-            
+
             while (index < count && !match(array[index]))
                 index++;
 
@@ -141,69 +143,81 @@ namespace STS.General.Extensions
             InsertionSort<T>(array, 0, array.Length, comparer);
         }
 
-        public static bool QuickSort<T>(T[] array, int index, int count, IComparer<T> comparer, ref bool cancel)
+        private static void QuickSort<T>(T[] array, int low, int high, IComparer<T> comparer, int maxDepth, int depth)
         {
-            if (cancel)
-                return false;
-
-            if (count <= 16)
+            if (high - low <= 16)
             {
-                array.InsertionSort(index, count, comparer);
-                return !cancel;
+                array.InsertionSort(low, high - low + 1, comparer);
+
+                return;
             }
 
-            int low = index;
-            int high = index + count - 1;
+            int i = low;
+            int j = high;
+            T pivot = array[(low + high) / 2];
 
-            int mid = (high + low) / 2;
-            T pivot = array[mid];
-
-            array.Swap(low, mid);
-
-            int pos = low;
-
-            for (int i = low + 1; i <= high && !cancel; i++)
+            do
             {
-                if (comparer.Compare(array[i], pivot) < 0)
+                while (comparer.Compare(array[i], pivot) < 0)
+                    i++;
+
+                while (comparer.Compare(array[j], pivot) > 0)
+                    j--;
+
+                if (i <= j)
                 {
-                    pos++;
-                    array.Swap(i, pos);
+                    array.Swap(i, j);
+                    i++; j--;
                 }
+
+            } while (i <= j);
+
+            if (maxDepth <= depth)
+            {
+                if (i < high)
+                    QuickSort(array, i, high, comparer, maxDepth, depth + 1);
+                if (low < j)
+                    QuickSort(array, low, j, comparer, maxDepth, depth + 1);
+            }
+            else
+            {
+                Action leftAction = () => QuickSort(array, i, high, comparer, maxDepth, depth + 1);
+                Action rightAction = () => QuickSort(array, low, j, comparer, maxDepth, depth + 1);
+
+                if (i < high && low < j)
+                    Parallel.Invoke(leftAction, rightAction);
+                else if (i < high)
+                    Parallel.Invoke(leftAction);
+                else if (low < j)
+                    Parallel.Invoke(rightAction);
+            }
+        }
+
+        public static void QuickSort<T>(this T[] array, IComparer<T> comparer)
+        {
+            QuickSort(array, 0, array.Length - 1, comparer, System.Environment.ProcessorCount * 2, 0);
+        }
+
+        public static bool IsOrdered<T>(this T[] array, int index, int count, IComparer<T> comparer, bool strictMonotone = false)
+        {
+            if (count == 0)
+                return true;
+
+            int limit = strictMonotone ? -1 : 0;
+            int toExclusive = index + count;
+
+            for (int i = index + 1; i < toExclusive; i++)
+            {
+                if (comparer.Compare(array[i - 1], array[i]) > limit)
+                    return false;
             }
 
-            if (cancel)
-                return false;
-
-            array.Swap(low, pos);
-
-            return QuickSort(array, index, pos - index, comparer, ref cancel) && QuickSort(array, pos, count - (pos - index), comparer, ref cancel);
+            return true;
         }
 
-        public static bool QuickSort<T>(T[] array, IComparer<T> comparer, ref bool cancel)
+        public static bool IsOrdered<T>(this T[] array, bool strictMonotone = false)
         {
-            return QuickSort(array, 0, array.Length, comparer, ref cancel);
+            return array.IsOrdered(0, array.Length, Comparer<T>.Default, strictMonotone);
         }
-
-		public static bool IsOrdered<T>(this T[] array, int index, int count, IComparer<T> comparer, bool strictMonotone = false)
-		{
-			if (count == 0)
-				return true;
-
-			int limit = strictMonotone ? -1 : 0;
-			int toExclusive = index + count;
-
-			for (int i = index + 1; i < toExclusive; i++)
-			{
-				if (comparer.Compare(array[i - 1], array[i]) > limit)
-					return false;
-			}
-
-			return true;
-		}
-
-		public static bool IsOrdered<T>(this T[] array, bool strictMonotone = false)
-		{
-			return array.IsOrdered(0, array.Length, Comparer<T>.Default, strictMonotone);
-		}
-	}
+    }
 }

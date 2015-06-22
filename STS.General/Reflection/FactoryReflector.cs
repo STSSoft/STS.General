@@ -3,12 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Linq.Expressions;
+using STS.General.Extensions;
+using System.Reflection;
 
 namespace STS.General.Reflection
 {
     public class FactoryReflector<T>
     {
+#if !NETFX_CORE
         public static readonly Type[] EmptyTypes = Type.EmptyTypes;
+#endif
 
         private Func<T> createInstanceDelegate;
 
@@ -16,12 +20,28 @@ namespace STS.General.Reflection
         {
             Type type = typeof(T);
 
+            ConstructorInfo cst = null;
+
+#if NETFX_CORE
+            cst = type.GetConstructor();
+#else
+            cst = type.GetConstructor(EmptyTypes);
+#endif
+
             Expression body;
-            if (type.GetConstructor(EmptyTypes) != null)
+            if (cst != null)
                 body = Expression.New(type);
             else
             {
-                if (type.IsValueType)
+                bool isValueType;
+
+#if NETFX_CORE
+                isValueType = type.IsByRef;
+#else
+                isValueType = type.IsValueType;
+#endif
+
+                if (isValueType)
                     body = Expression.Constant(default(T));
                 else
                     body = Expression.Convert(Expression.Constant(null), type);
@@ -46,7 +66,15 @@ namespace STS.General.Reflection
             if (null == type)
                 throw new ArgumentNullException("type");
 
-            if (type.GetConstructor(Type.EmptyTypes) == null)
+            ConstructorInfo cst = null;
+
+#if NETFX_CORE
+            cst = type.GetConstructor();
+#else
+            cst = type.GetConstructor(Type.EmptyTypes);
+#endif
+
+            if (cst == null)
             {
                 var lambda = Expression.Lambda<Func<object>>(Expression.Constant(null));
 
